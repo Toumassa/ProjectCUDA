@@ -1,0 +1,84 @@
+# Type of Forest ["Classification"]
+ForestType = Classification
+
+# Type of Energy Used ["Entropy" for Std. Classification tree, "StructLabel" for ICCV'11 structured labels + simple fusion]
+EnergyType = StructLabel
+
+# Training Type ["Standard"]
+TrainType = Standard
+
+# Sampling Type ["Homogeneous", "Stride"] (how data is sampled for training)
+SamplingType = Homogeneous
+
+# 2nd-stage features ["Hot1", "Ours"]
+Features2ndStage = Ours
+
+# Sampling parameter [double]
+# (for homogeneous: maximum number of samples per class per image)
+# (for stride: distance between pixels on grid)
+SamplingParameter = 10
+
+# Original Image folder [string]
+ImageFolder = simple-data
+
+# Full path to list of images [string]
+ListImages = simple-data/list_images.txt
+
+# Full path to list of training image numbers [string]
+# To obtain the full path, "X.txt" will be added, where X is the tree number
+ListTrainingImageNumbersPrefix = simple-data/not2beused
+
+# Ground truth image folder [string]
+# Ground truth images should be named label_rearrangedXXXX.png
+GroundTruthFolder = simple-data/groundtruth
+
+# Feature folder [string]
+FeatureFolder = simple-data/features
+
+# 2nd-stage feature folder [string]
+Feature2ndStageFolder = simple-data/not2beused
+
+# Destination tree folder [string]
+TreeFolder = simple-data/not2beused
+
+# Results destination folder [string]
+OutputFolder = simple-data/output
+
+# 2nd-stage destination tree folder [string]
+Tree2ndStageFolder = simple-data/not2beused
+
+# 2nd-stage results destination folder [string]
+Output2ndStageFolder = simple-data/not2beused
+
+# Maximum tree depth [int] (-1 for minimum number of samples only, or > 0)
+MaxDepth = 10
+
+# Minimum number of samples per node [int]
+MinNumSamples = 15
+
+# Number of node tests [int]
+NumNodeTests = 300
+
+# Maximum Probe Offset [int] (defines radius for tests -> "patch" size)
+MaxProbeOffset = 30
+
+# Factor for input images to be rescaled [double]
+RescaleFactor = 0.5
+
+# Defines the number of labels to be used from GT (0..NumLabels-1), rest is ignored [int]
+NumLabels = 9
+
+# Performs re-weighting on the samples according to inverse frequency [bool]
+UseWeights = false
+
+# Specific parameters for Structured Class-Labels
+# Dimensions of label patches [int]
+LabelPatchWidth = 13
+LabelPatchHeight = 13
+
+# Dimensionality of joint probability (def: 2) [int]
+JointProbDim = 2
+
+
+
+
