@@ -26,38 +26,15 @@
 #include "SemanticSegmentationForests.h"
 #include "StrucClassSSF.h"
 
+
 #include "label.h"
+#include "GPUAdapter.h"
 
 using namespace std;
 using namespace vision;
 
-typedef struct ANode{
-	//TNode
-	int  id;
-	int parent;
-	int left;
-	int right;
-	uint32_t start, end;
-	uint16_t depth;
-	uint32_t idx;
-	
-	//Prediction
-	uint32_t histSize;
-	uint32_t* hist;
-	float* p;
 
-	//SplitData
-	
-	int16_t dx1, dx2;
-	int16_t dy1, dy2;
-	int8_t bw1, bh1, bw2, bh2;
-	uint8_t channel0;    // number of feature channels is restricted by 255
-	uint8_t channel1;
-	uint8_t fType;           // CW: split type
-	/*FeatureType*/ float thres; 
-	
-	///
-} ANode;
+
 
 /***************************************************************************
  USAGE
@@ -103,82 +80,25 @@ inline float profilingTime (const char *s, time_t *whichClock)
  ***************************************************************************/
 
 
-void treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter)
-{
-	 
-     ANode anode;
-     anode.id = id;
-     anode.parent = parent;
-     //node filling
-		//TNode attributes
-		 anode.depth=node->getDepth();
-		 anode.start=node->getStart();
-		 anode.end=node->getEnd();
-		 anode.idx=node->getIdx();
-		//Prediction attributes
-		Prediction predict=node->getPrediction();
-		anode.histSize=predict.n;
-		//anode.hist should be a problem copying in GPU
-		anode.hist=new uint32_t[anode.histSize];
-		for (int i=0;i<anode.histSize;i++){
-			anode.hist[i]=predict.hist[i];
-		}
-		
-     if(!(node->isLeaf()))
-	 {
-		 anode.left = ++(*id_counter);
-		anode.right = ++(*id_counter);
-	 }
-	  else
-	 {
-		 anode.left = -1;
-		 anode.right = -1;
-	 }
-	 arbre->push_back(anode);
 
-	 if(!(node->isLeaf()))
-	 {
-		 
-		 treeToVectorRecursif(arbre, node->getLeft(), anode.id,anode.left, id_counter);
-		 treeToVectorRecursif(arbre, node->getRight(), anode.id,anode.right, id_counter);
-	 }
-	
-} 
-void treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*tree)
-{
-	int id=0;
-	
-    treeToVectorRecursif(treeAsVector, (*tree).root(), -1,0, &id);
-}
 void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
-	cout << "New algorithm" << endl; 
+	cout << "---test---GPUAdapter" << endl; 
+
+
+    GPUAdapter newGPUAdapter;
+    newGPUAdapter.AddTree(&forest[0]);
+    newGPUAdapter.test();
+
+
     int iImage;
     cv::Point pt;
     cv::Mat matConfusion;
     char strOutput[200];
     
-    vector<ANode> *treeVector = new vector<ANode>();
-    
-    treeToVector(treeVector, &forest[2]);
-    int treeSize=treeVector->size();
-    cout << "Vector Size: " << treeSize<<endl;
-    
-    ANode *treeTab = new ANode[treeSize];
-	for(int i = 0; i < treeSize; i++){
-		treeTab[i]=(*treeVector)[i];
-	}
-    
-    delete treeVector;
-    
-   for(int i = 0; i < treeSize; i++)
-   {
-	   ANode node = treeTab[i];
-	   
-	   
-	   cout << " id: "<<  node.id << " parent: "<< node.parent << " left: "<< node.left << " right: " << node.right << endl;
-   }
-   
+
+
+    /**/
     // Process all test images
     // result goes into ====> result[].at<>(pt)
     for (iImage = 0; iImage < pTS->getNbImages(); ++iImage)
@@ -279,7 +199,6 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
             return;
         } 
     }    
-        delete[] treeTab;
 
 }
 

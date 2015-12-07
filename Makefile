@@ -4,7 +4,7 @@ LD = g++
 WARNGCC= -Wno-sign-compare -Wno-reorder -Wno-unknown-pragmas -Wno-overloaded-virtual
 
 # --- With optimisation
-CPPFLAGS = -std=c++0x -DNDEBUG -O3 -msse2 -Wall $(WARNGCC)
+CPPFLAGS = -std=c++0x -DNDEBUG -O3 -msse2 $(WARNGCC)
 LDFLAGS = -DNEBUG -O3 -msse2
 
 # --- Debugging
@@ -25,10 +25,13 @@ testcpu:
 %.o: %.cpp 
 	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
 
-main_test_simple.o: main_test_transformed.cpp
+main_test_transformed.o: main_test_transformed.cpp GPUAdapter.o
 	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
 
-sf1_cpu: ConfigReader.o ImageData.o ImageDataFloat.o labelfeature.o label.o main_test_simple.o
+main_test_simple.o: main_test_simple.cpp
+	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
+
+sf1_cpu: ConfigReader.o ImageData.o ImageDataFloat.o labelfeature.o label.o main_test_transformed.o GPUAdapter.o
 	$(LD) $+ -o $@ $(LDFLAGS) $(LIB_DIR) $(LIBS)
 
 lab2rgb: lab2rgb.o label.o
