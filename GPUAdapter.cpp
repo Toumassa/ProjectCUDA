@@ -17,12 +17,6 @@ void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<floa
 		//Prediction attributes
 		Prediction predict=node->getPrediction();
 		anode.histSize=predict.n;
-		/*//anode.hist should be a problem copying in GPU
-		anode.hist=new uint32_t[anode.histSize];
-		for (int i=0;i<anode.histSize;i++){
-			anode.hist[i]=predict.hist[i];
-		}*/
-
 
 			//Adding node's hist vector to common vector with saving
 			//           offset and size in nodes informations
@@ -125,6 +119,7 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
     }*/
 
     this->treesAsVector.push_back(treeVector);
+    this->trainingSets.push_back(inputTree->getTrainingSet());
 }
 
 

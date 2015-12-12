@@ -46,6 +46,11 @@ typedef struct ANode{
 	/*FeatureType*/ /*float thres; */
 	
 	///
+	inline bool isLeaf()
+	{
+		return ((this->left == -1)/* && (node.right) == -1*/);
+	}
+
 } ANode;
 	
 class GPUAdapter
@@ -62,6 +67,8 @@ public:
 	}
 private:
 	vector<vector<ANode>* > treesAsVector;
+	vector<TrainingSet<float> *> trainingSets;
+
 
 	vector<uint32_t> common_hist_tab; 
 	vector<float> common_p_tab; 

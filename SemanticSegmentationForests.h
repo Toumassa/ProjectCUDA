@@ -115,11 +115,16 @@ public:
   {
   }
 
-  void setTrainingSet(const TrainingSet<FeatureType> *pt)
+  void setTrainingSet(TrainingSet<FeatureType> *pt)
   {
     this->ts = pt;
     nClasses = ts->getNLabels();
     importance.resize(nClasses, 1.0);
+  }
+
+  TrainingSet<FeatureType> *getTrainingSet()
+  {
+    return ts;
   }
 
   void setMinSamples(uint32_t minSamples)
@@ -771,7 +776,7 @@ protected:
   uint32_t samplingParam;
   uint16_t maxProbeOffset;
 
-  const TrainingSet<FeatureType> *ts;
+  TrainingSet<FeatureType> *ts;
   vector<float> importance;
   mutable RNG rng;
 };
