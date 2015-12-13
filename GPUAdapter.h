@@ -65,6 +65,9 @@ public:
 		cout << "hist tab size : " << common_hist_tab.size() << endl;
 		cout << "P tab size : " << common_p_tab.size() << endl;
 	}
+
+
+	void* PushTreeToGPU(int);
 private:
 	vector<vector<ANode>* > treesAsVector;
 	vector<TrainingSet<float> *> trainingSets;

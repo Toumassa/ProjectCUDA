@@ -123,3 +123,18 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 }
 
 
+
+
+void* GPUAdapter::PushTreeToGPU(int n)
+{
+	if(n < 0 || n > this->treesAsVector.size())
+	{
+		cerr << "incorrect tree index" << endl;
+		return NULL;
+	}
+
+	//change with malloc GPU
+	ANode *treeAsTab = (ANode*)malloc( (this->treesAsVector[n])->size()*sizeof(ANode));
+
+	return (void*)treeAsTab;
+}
