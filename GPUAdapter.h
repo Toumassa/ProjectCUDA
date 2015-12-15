@@ -53,23 +53,13 @@ typedef struct ANode{
 
 } ANode;
 
-typedef struct ATrainingSet{
-	float* importance;
-    uint8_t nLabels;
-    uint8_t nChannels;
-    
-    ImageData *pImageData;
-    
-    int iWidth, iHeight;
-} ATrainingSet;
-	
 class GPUAdapter
 {
 public:
 	GPUAdapter(){}
 	~GPUAdapter();
 	void AddTree(StrucClassSSF<float>*tree);
-	void SetTrainingSet(TrainingSet<float> *ts);
+	void SetTrainingSetSelection(TrainingSetSelection<float> *ts);
 
 	void test()
 	{
@@ -86,6 +76,16 @@ private:
 	vector<uint32_t> common_hist_tab; 
 	vector<float> common_p_tab; 
 
+	ImageData *pImageData;
+	int iWidth, iHeight, nChannels;
+
+	TrainingSetSelection<float> *ts;
+
+	float *features;
+	float *features_integral;
+
+	void getFlattenedFeatures(uint16_t imageId, float **out_features, int *out_nbChannels);
+	void getFlattenedIntegralFeatures(uint16_t imageId, float **out_features_integral, int16_t *out_w, int16_t *out_h);
 
 	/*Private use functions for all trees*/
 	void treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*tree);
