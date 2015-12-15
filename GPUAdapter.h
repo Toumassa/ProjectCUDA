@@ -46,10 +46,10 @@ typedef struct ANode{
 	/*FeatureType*/ /*float thres; */
 	
 	///
-	inline bool isLeaf()
+	/*inline bool isLeaf()
 	{
-		return ((this->left == -1)/* && (node.right) == -1*/);
-	}
+		return ((this->left == -1)/);
+	}*/
 
 } ANode;
 
