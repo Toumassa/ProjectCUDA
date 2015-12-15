@@ -122,7 +122,10 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
     this->trainingSets.push_back(inputTree->getTrainingSet());
 }
 
-
+void SetTrainingSet(TrainingSet<float> *ts)
+{
+	
+}
 
 
 void* GPUAdapter::PushTreeToGPU(int n)
