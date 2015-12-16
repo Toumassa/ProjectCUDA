@@ -39,7 +39,6 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
     pt2.x = sample.x + splitData.dx1 + splitData.bw1 + 1; // remember -> integral images have size w+1 x h+1
     pt2.y = sample.y + splitData.dy1 + splitData.bh1 + 1;
 
-
     if (pt1.x < 0 || pt2.x < 0 || pt1.y < 0 || pt2.y < 0 ||
         pt1.x > w || pt2.x > w || pt1.y > h || pt2.y > h) // due to size correction in getImgXXX we dont have to check \geq
     {

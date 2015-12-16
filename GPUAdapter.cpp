@@ -211,6 +211,8 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
 }
 void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
+    this->ts = pTS;
+    this->pImageData = this->ts->pImageData;
     std::cout << "Launching PreKernel\n"; 
     this->treeTabCount = cr->numTrees;
 	this->treeAsTab = new ANode*[this->treeTabCount];

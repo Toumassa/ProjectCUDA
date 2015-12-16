@@ -188,7 +188,8 @@ template <typename FeatureType> class TrainingSet
     {
         return importance;
     }
-
+    
+    ImageData *pImageData;
   protected:
     /*
     vector<vector<cv::Mat> > images;
@@ -197,7 +198,6 @@ template <typename FeatureType> class TrainingSet
     vector<float> importance;
     uint8_t nLabels;
     uint8_t nChannels;
-    ImageData *pImageData;
     int iWidth, iHeight;
 
     // bool integralImgs;
