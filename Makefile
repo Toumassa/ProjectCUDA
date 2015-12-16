@@ -25,13 +25,13 @@ testcpu:
 %.o: %.cpp 
 	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
 
-main_test_transformed.o: main_test_transformed.cpp GPUAdapter.o
+main_test_transformed.o: main_test_transformed.cpp GPUAdapter.o kernel.o
 	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
 
 main_test_simple.o: main_test_simple.cpp
 	$(CC) -c $(CPPFLAGS) $(INCLUDE_DIR) $< -o $@
 
-sf1_cpu: ConfigReader.o ImageData.o ImageDataFloat.o labelfeature.o label.o main_test_transformed.o GPUAdapter.o
+sf1_cpu: ConfigReader.o ImageData.o ImageDataFloat.o labelfeature.o label.o main_test_transformed.o GPUAdapter.o kernel.o
 	$(LD) $+ -o $@ $(LDFLAGS) $(LIB_DIR) $(LIBS)
 
 lab2rgb: lab2rgb.o label.o

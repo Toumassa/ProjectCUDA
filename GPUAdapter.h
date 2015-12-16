@@ -2,6 +2,7 @@
 #define DEF_GPU_ADAPTER
 
 #include <vector>
+#include <iostream>
 #include "SemanticSegmentationForests.h"
 #include "StrucClassSSF.h"
 
@@ -61,31 +62,34 @@ public:
 	void AddTree(StrucClassSSF<float>*tree);
 	void SetTrainingSetSelection(TrainingSetSelection<float> *ts);
 
-	void test()
-	{
-		cout << "hist tab size : " << common_hist_tab.size() << endl;
-		cout << "P tab size : " << common_p_tab.size() << endl;
-	}
 
+	void testGPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 
-	void* PushTreeToGPU(int);
+	void preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS);
+
+	ANode* PushTreeToGPU(int);
 private:
 	vector<vector<ANode>* > treesAsVector;
+	ANode **treeAsTab;
+	unsigned int treeTabCount;
 
+	float *features;
+	float *features_integral;
 
 	vector<uint32_t> common_hist_tab; 
 	vector<float> common_p_tab; 
 
 	ImageData *pImageData;
-	int iWidth, iHeight, nChannels;
+	uint16_t iWidth, iHeight, nChannels, numLabels;
 
 	TrainingSetSelection<float> *ts;
 
-	float *features;
-	float *features_integral;
+	int lPXOff;
+	int lPYOff;
 
-	void getFlattenedFeatures(uint16_t imageId, float **out_features, int *out_nbChannels);
-	void getFlattenedIntegralFeatures(uint16_t imageId, float **out_features_integral, int16_t *out_w, int16_t *out_h);
+
+	void getFlattenedFeatures(uint16_t imageId, float **out_features, uint16_t *out_nbChannels);
+	void getFlattenedIntegralFeatures(uint16_t imageId, float **out_features_integral, uint16_t *out_w, uint16_t *out_h);
 
 	/*Private use functions for all trees*/
 	void treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*tree);

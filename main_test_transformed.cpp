@@ -87,8 +87,6 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 
 
     GPUAdapter newGPUAdapter;
-    newGPUAdapter.AddTree(&forest[0]);
-    newGPUAdapter.test();
 
 
     int iImage;
@@ -112,12 +110,15 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         cv::Rect box(0, 0, pTS->getImgWidth(s.imageId), pTS->getImgHeight(s.imageId));
         cv::Mat mapResult = cv::Mat::ones(box.size(), CV_8UC1) * cr->numLabels;
 
-        
+        newGPUAdapter.preKernel(s.imageId, forest, cr, pTS);
         // ==============================================
         // THE CLASSICAL CPU SOLUTION
         // ==============================================
 
         profiling("");
+
+        newGPUAdapter.testGPUSolution(&mapResult, box, s);
+        /*
         int lPXOff = cr->labelPatchWidth / 2;
     	int lPYOff = cr->labelPatchHeight / 2;
 
@@ -177,7 +178,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 
             mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
         }
-
+        */
         profiling("Prediction");
 
         // Write segmentation map
