@@ -79,9 +79,9 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
           sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w, h) / norm1
                        - gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w, h) / norm2;
         }
-        else
+        /*else
           cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)"
-               << endl;
+               << endl;*/
 
       }
     }
@@ -96,28 +96,33 @@ void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int1
   int curNode = 0; //initialising to Root
 
     SplitResult sr = SR_LEFT;
-    while ((tree[curNode].left != -1) && sr != SR_INVALID)
+    while (tree[curNode].left != -1 && tree[curNode].right != -1 && sr != SR_INVALID)
     {
     /*if (this->bUseRandomBoxes==true)*/
     
-    sr = split(tree[curNode].splitData, sample, w, h, features, features_integral);
-
+	cout << "curnode" << curNode << endl;
+    //sr = split(tree[curNode].splitData, sample, w, h, features, features_integral);
     /*else
         sr = AbstractSemanticSegmentationTree<IErrorData,FeatureType>::split(curNode->getSplitData(), sample);*/
-
+    sr = SR_RIGHT;
     switch (sr)
       {
       case SR_LEFT:
         curNode = tree[curNode].left;
+	cout << "curnode->left" << curNode<< endl;
         break;
       case SR_RIGHT:
         curNode = tree[curNode].right;
+	cout << "curnode->right" << curNode<< endl;
         break;
       default:
+	cout << "curnode ???" << curNode << endl;
         break;
       }
     }
-
+	
     (*returnStartHistTab) = tree[curNode].common_hist_tab_offset;
     (*returnCountHistTab) = tree[curNode].common_hist_tab_size;
+    
+    //cout << "returning start, offset:" << (*returnStartHistTab) <<","<<(*returnCountHistTab) <<endl;
 }

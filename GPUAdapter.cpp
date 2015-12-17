@@ -122,11 +122,10 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 
     cout << "Vector Size: " << treeVector->size()<<endl;
     
-    /*for(int i = 0; i < treeVector->size(); i++){
-       //ANode node = (*treeVector)[i];
-       
-       //cout << " id: "<<  node.id << " parent: "<< node.parent << " left: "<< node.left << " right: " << node.right << endl;
-    }*/
+    for(int i = 0; i < 1; i++){
+       ANode node = (*treeVector)[i];
+       cout << " id: "<<  node.id << " parent: "<< node.parent << " left: "<< node.left << " right: " << node.right << " hist:"<< this->common_hist_tab[node.common_hist_tab_offset]<<endl;
+    }
 
     this->treesAsVector.push_back(treeVector);
 }
@@ -152,7 +151,10 @@ ANode* GPUAdapter::PushTreeToGPU(int n)
 
 	//change with malloc GPU
 	ANode *treeAsTab = (ANode*)malloc( (this->treesAsVector[n])->size()*sizeof(ANode));
-
+	for(int i = 0; i < (this->treesAsVector[n])->size();i++)
+	{
+		treeAsTab[i] = (*(this->treesAsVector[n]))[i];
+	}		
 	return treeAsTab;
 }
 
@@ -162,13 +164,21 @@ void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, ui
 {
     vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(this->ts->vectSelectedImagesIndices[imageId]);
     assert(pFeatureImages!=NULL);
-
-    float *flat = (float *) malloc (sizeof(float)*(this->iWidth)*(this->iHeight)*(this->nChannels));
+    int16_t w = (*pFeatureImages)[0].cols;
+    int16_t h = (*pFeatureImages)[0].rows;
+ 
+	cout << "w:"<<w<<endl;
+	cout << "h:"<<h<<endl;
+	cout << "nChannels:"<<this->nChannels<<endl;
+	
+    float *flat = (float *) malloc (sizeof(float)*w*h*(this->nChannels));
     if (flat==NULL)
     {
     	std::cerr << "Cannot allocate flat feature data\n";
     	exit(1);
     }
+    this->iWidth = w;
+    this->iHeight = h;
     
     for (int c=0; c<this->nChannels; ++c)
     for (int x=0; x<this->iWidth; ++x)
@@ -177,7 +187,8 @@ void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, ui
     		(*pFeatureImages)[c].at<float>(y, x);
     
     *out_features = flat;
-    *out_nbChannels = this->nChannels;
+    //*out_nbChannels = this->nChannels;
+    cout << "getFlattenedFeatures - ok" << endl;
 }
 
 /***************************************************************************
@@ -192,7 +203,8 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
 
     int16_t w = (*pFeatureImages)[0].cols;
     int16_t h = (*pFeatureImages)[0].rows;
-    float *flat = (float *) malloc (sizeof(float)*w*h*(this->nChannels));
+    
+    float *flat = (float *) malloc ((int)sizeof(float)*w*h*(this->nChannels));
     if (flat==NULL)
     {
     	std::cerr << "Cannot allocate flat integral feature data\n";
@@ -208,6 +220,8 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     *out_w = w;
     *out_h = h;
     *out_features_integral = flat;
+    
+    cout << "getFlattenedIntegralFeatures - ok" << endl;
 }
 void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
@@ -217,6 +231,8 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
     this->treeTabCount = cr->numTrees;
 	this->treeAsTab = new ANode*[this->treeTabCount];
 
+	
+	 this->nChannels = this->ts->getNChannels();
 	for(size_t t = 0; t < this->treeTabCount; ++t)
     {
     	this->AddTree(&(forest[t]));
@@ -227,7 +243,8 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
         //actually implemented to CPU
     	this->treeAsTab[i] = PushTreeToGPU(i);
     }
-
+	
+	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
     this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->iWidth), &(this->iHeight));
 
@@ -244,7 +261,8 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 
     cv::Point pt;
 
-
+	s.x = 0;
+	s.y = 0;
 
         // Initialize the result matrices
     vector<cv::Mat> result(this->numLabels);
@@ -257,8 +275,9 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     {
         // Obtain forest predictions
         // Iterate over all trees
-        for(size_t t = 0; t < this->treeTabCount; ++t)
+        for(size_t t = 0; t < /*2*/this->treeTabCount; ++t)
         {
+            cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
         	// The prediction itself.
         	// The given Sample object s contains the imageId and the pixel coordinates.
             // p is an iterator to a vector over labels (attribut hist of class Prediction)
@@ -266,20 +285,25 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
             // (this is the structured version of a random forest!)
            // vector<uint32_t>::const_iterator p = forest[t].predictPtr(s);
 
-
             predict(&returnStartHistTab, &returnCountHistTab, this->treeAsTab[t], this->iWidth, this->iHeight, this->features, this->features_integral, s);
             int p = returnStartHistTab;
+            
+           // cout << "p : " << p << endl;
             for (pt.y=(int)s.y-this->lPYOff;pt.y<=(int)s.y+(int)this->lPYOff;++pt.y)
             for (pt.x=(int)s.x-(int)this->lPXOff;pt.x<=(int)s.x+(int)this->lPXOff;++pt.x,++p)
             {
-            	if (this->common_hist_tab[p]<0 || this->common_hist_tab[p] >= (size_t)this->numLabels)
-            	{
-            		std::cerr << "Invalid label in prediction: " << (int) this->common_hist_tab[p] << "\n";
-            		exit(1);
-            	}
+            	
 
                 if (box.contains(pt))
-                {
+				{	
+					if (this->common_hist_tab[p]<0 || this->common_hist_tab[p] >= (size_t)this->numLabels)
+					{
+						cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
+						cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
+						cout << "*p : " << this->common_hist_tab[p] << endl;
+						std::cerr << "Invalid label in prediction: " << (int) this->common_hist_tab[p] << "\n";
+						exit(1);
+					}
                     result[this->common_hist_tab[p]].at<float>(pt) += 1;
                     //result[*p].at<float>(pt) += 1;
                 }
