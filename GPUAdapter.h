@@ -92,7 +92,8 @@ private:
 
 	/*Private use functions for all trees*/
 	void treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*tree);
-	void treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter);
+	//void treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter);
+	int treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node);
 };
 
 

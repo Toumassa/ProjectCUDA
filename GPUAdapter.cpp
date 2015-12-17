@@ -2,7 +2,7 @@
 #include "kernel.h"
 
 
-void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter)
+/*void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter)
 {
 	 
      ANode anode;
@@ -36,7 +36,7 @@ void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<floa
 		for(int i =0; i < anode.common_p_tab_size;i++)
 		{
 			this->common_p_tab.push_back(predict.p[i]);
-		}/*/
+		}
 
 
 		anode.splitData = node->splitData;
@@ -59,13 +59,70 @@ void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<floa
 		 treeToVectorRecursif(arbre, node->getLeft(), anode.id,anode.left, id_counter);
 		 treeToVectorRecursif(arbre, node->getRight(), anode.id,anode.right, id_counter);
 	 }
-} 
+} */
+int GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node)
+{
+        ANode anode;
+    
+     //node filling
+        //TNode attributes
+         anode.depth=node->getDepth();
+         anode.start=node->getStart();
+         anode.end=node->getEnd();
+         anode.idx=node->getIdx();
+        //Prediction attributes
+        Prediction predict=node->getPrediction();
+        anode.histSize=predict.n;
 
+            //Adding node's hist vector to common vector with saving
+            //           offset and size in nodes informations
+
+        anode.common_hist_tab_offset = this->common_hist_tab.size();
+        anode.common_hist_tab_size = predict.hist.size();
+        for(int i =0; i < anode.common_hist_tab_size ;i++)
+        {
+            this->common_hist_tab.push_back(predict.hist[i]);
+        }
+
+            //Adding node's p vector to common vector with saving
+            //           offset and size in nodes informations
+        /*anode.common_p_tab_offset = this->common_p_tab.size();
+        anode.common_p_tab_size = predict.p.size();
+        
+        for(int i =0; i < anode.common_p_tab_size;i++)
+        {
+            this->common_p_tab.push_back(predict.p[i]);
+        }*/
+
+
+        anode.splitData = node->splitData;
+        anode.id = arbre->size();
+
+        arbre->push_back(anode);
+
+
+        //cout << anode.id << endl;
+
+     if(!(node->isLeaf()))
+     {
+         int left = treeToVectorRecursif(arbre, node->getLeft());
+         int right = treeToVectorRecursif(arbre, node->getRight());
+         (*arbre)[anode.id].left = left;
+         (*arbre)[anode.id].right = right;
+     }
+      else/**/
+     {
+         (*arbre)[anode.id].left = -1;
+         (*arbre)[anode.id].right = -1;
+     }
+
+     return anode.id;
+} 
 void GPUAdapter::treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*tree)
 {
 	int id=0;
 	
-    treeToVectorRecursif(treeAsVector, (*tree).root(), -1,0, &id);
+    treeToVectorRecursif(treeAsVector, (*tree).root());
 }
 
 GPUAdapter::~GPUAdapter()
@@ -247,8 +304,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
             predict(&returnStartHistTab, &returnCountHistTab, this->treeAsTab[t], this->iWidth, this->iHeight, this->w_integral, this->h_integral, this->features, this->features_integral, s);
             int p = returnStartHistTab;
             
-            if(s.x == 0 && s.y == 0 && t == 0)
-                cout << "*p (0, 0, 0) = "<<this->common_hist_tab[p]<<endl;
 
            // cout << "p : " << p << endl;
             for (pt.y=(int)s.y-this->lPYOff;pt.y<=(int)s.y+(int)this->lPYOff;++pt.y)
