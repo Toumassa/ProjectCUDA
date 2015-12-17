@@ -4,6 +4,7 @@
 float gpuGetValue (float *gpuFeatures, uint8_t channel, 
     int16_t x, int16_t y, int16_t w, int16_t h)
 {
+  //cout << "before gpuGetValue\n";
     float res = gpuFeatures[y+x*h + channel*w*h];
     return res;
 }
@@ -12,6 +13,7 @@ float gpuGetValue (float *gpuFeatures, uint8_t channel,
 float gpuGetValueIntegral (float *gpuFeaturesIntegral, uint8_t channel, 
     int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t w, int16_t h)
 {
+  //cout << "before gpuGetValueIntegral\n";
     float res = (
         gpuFeaturesIntegral[y2 + x2*h + channel*w*h] -
             gpuFeaturesIntegral[y2 + x1*h + channel*w*h] -
@@ -24,12 +26,15 @@ float gpuGetValueIntegral (float *gpuFeaturesIntegral, uint8_t channel,
 
 
 /*__device__*/
-SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, int16_t h, float *gpuFeatures, float *gpuFeaturesIntegral)
+SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float *gpuFeatures, float *gpuFeaturesIntegral)
 {
    //sample.value = this->ts->getValue(sample.imageId, splitData.channel0, sample.x, sample.y); //, sample.x+1, sample.y+1);
   sample.value = gpuGetValue(gpuFeatures, splitData.channel0, sample.x, sample.y, w, h);
   SplitResult centerResult = (sample.value < splitData.thres) ? SR_LEFT : SR_RIGHT;
-
+    if ((int)splitData.fType == 0) // single probe (center only)
+    {
+        return centerResult;
+    }
     // for cases when we have non-centered probe types
     Point pt1, pt2, pt3, pt4;
 
@@ -46,10 +51,10 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
     }
     else
     {
-      if (splitData.fType == 1) // single probe (center - offset)
+      if ((int)splitData.fType == 1) // single probe (center - offset)
       {
         int16_t norm1 = (pt2.x - pt1.x) * (pt2.y - pt1.y);
-        sample.value -= gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w, h) / norm1;
+        sample.value -= gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1;
       }
       else                      // pixel pair probe test
       {
@@ -69,19 +74,19 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
         int16_t norm1 = (pt2.x - pt1.x) * (pt2.y - pt1.y);
         int16_t norm2 = (pt4.x - pt3.x) * (pt4.y - pt3.y);
 
-        if (splitData.fType == 2)    // sum of pair probes
+        if ((int)splitData.fType == 2)    // sum of pair probes
         {
-          sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w, h) / norm1
-                       + gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w, h) / norm2;
+          sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1
+                       + gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w_i, h_i) / norm2;
         }
-        else if (splitData.fType == 3)  // difference of pair probes
+        else if ((int)splitData.fType == 3)  // difference of pair probes
         {
-          sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w, h) / norm1
-                       - gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w, h) / norm2;
+          sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1
+                       - gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w_i, h_i) / norm2;
         }
-        /*else
-          cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...)"
-               << endl;*/
+        else
+          cout << "ERROR: Impossible case in splitData in StrucClassSSF::split(...) ftype="<< (int)splitData.fType
+               << endl;
 
       }
     }
@@ -91,36 +96,36 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
 }
 
 /*__device__*/
-void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int16_t w, int16_t h, float* features, float* features_integral, Sample<float> &sample)
+void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, Sample<float> &sample)
 {
+  //cout << "--------------------predict" << "\n";
   int curNode = 0; //initialising to Root
 
     SplitResult sr = SR_LEFT;
-    while (tree[curNode].left != -1 && tree[curNode].right != -1 && sr != SR_INVALID)
+    while (tree[curNode].left != -1 && sr != SR_INVALID)
     {
     /*if (this->bUseRandomBoxes==true)*/
     
-	cout << "curnode" << curNode << endl;
-    //sr = split(tree[curNode].splitData, sample, w, h, features, features_integral);
+	//cout << "curnode" << curNode << endl;
+    sr = split(tree[curNode].splitData, sample, w, h, w_i, h_i, features, features_integral);
     /*else
         sr = AbstractSemanticSegmentationTree<IErrorData,FeatureType>::split(curNode->getSplitData(), sample);*/
-    sr = SR_RIGHT;
+   // sr = SR_RIGHT;
     switch (sr)
       {
       case SR_LEFT:
         curNode = tree[curNode].left;
-	cout << "curnode->left" << curNode<< endl;
+	     //cout << "Goes left :" << curNode << "\n";  
         break;
       case SR_RIGHT:
         curNode = tree[curNode].right;
-	cout << "curnode->right" << curNode<< endl;
+	       //cout << "Goes right :" << curNode << "\n"; 
         break;
       default:
-	cout << "curnode ???" << curNode << endl;
+	//cout << "curnode ???" << curNode << endl;
         break;
       }
     }
-	
     (*returnStartHistTab) = tree[curNode].common_hist_tab_offset;
     (*returnCountHistTab) = tree[curNode].common_hist_tab_size;
     

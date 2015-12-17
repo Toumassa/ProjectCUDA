@@ -60,8 +60,6 @@ public:
 	GPUAdapter(){}
 	~GPUAdapter();
 	void AddTree(StrucClassSSF<float>*tree);
-	void SetTrainingSetSelection(TrainingSetSelection<float> *ts);
-
 
 	void testGPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 
@@ -81,6 +79,7 @@ private:
 
 	ImageData *pImageData;
 	uint16_t iWidth, iHeight, nChannels, numLabels;
+	uint16_t w_integral, h_integral;
 
 	TrainingSetSelection<float> *ts;
 

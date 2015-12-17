@@ -30,20 +30,20 @@ void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<floa
 
 			//Adding node's p vector to common vector with saving
 			//           offset and size in nodes informations
-		anode.common_p_tab_offset = this->common_p_tab.size();
+		/*anode.common_p_tab_offset = this->common_p_tab.size();
 		anode.common_p_tab_size = predict.p.size();
 		
 		for(int i =0; i < anode.common_p_tab_size;i++)
 		{
 			this->common_p_tab.push_back(predict.p[i]);
-		}/**/
+		}/*/
 
 
 		anode.splitData = node->splitData;
 		
      if(!(node->isLeaf()))
 	 {
-		 anode.left = ++(*id_counter);
+		anode.left = ++(*id_counter);
 		anode.right = ++(*id_counter);
 	 }
 	  else
@@ -67,32 +67,6 @@ void GPUAdapter::treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*
 	
     treeToVectorRecursif(treeAsVector, (*tree).root(), -1,0, &id);
 }
-
-/** Creates a new array representing the tree
- outputTree must be a pointer on 0x0
-
-*/
-/*void GPUAdapter::treeToTab(StrucClassSSF<float>*inputTree, ANode *outputTree, unsigned int *treeSize)
-{
-    vector<ANode> *treeVector = new vector<ANode>();
-    
-    treeToVector(treeVector, inputTree);
-    *treeSize=treeVector->size();
-    cout << "Vector Size: " << treeSize<<endl;
-    
-    outputTree = new ANode[*treeSize];
-    for(int i = 0; i < *treeSize; i++){
-        outputTree[i]=(*treeVector)[i];
-       ANode node = outputTree[i];
-       
-       cout << " id: "<<  node.id << " parent: "<< node.parent << " left: "<< node.left << " right: " << node.right << endl;
-    }
-    
-    delete treeVector;
-}*/
-
-
-
 
 GPUAdapter::~GPUAdapter()
 {
@@ -120,25 +94,11 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 
     treeToVector(treeVector, inputTree);
 
-    cout << "Vector Size: " << treeVector->size()<<endl;
-    
-    for(int i = 0; i < 1; i++){
-       ANode node = (*treeVector)[i];
-       cout << " id: "<<  node.id << " parent: "<< node.parent << " left: "<< node.left << " right: " << node.right << " hist:"<< this->common_hist_tab[node.common_hist_tab_offset]<<endl;
-    }
+    cout << "Tree Size: " << treeVector->size()<<endl;
 
     this->treesAsVector.push_back(treeVector);
 }
 
-void GPUAdapter::SetTrainingSetSelection(TrainingSetSelection<float> *trainingset)
-{
-	this->ts = ts;
-
-	this->iWidth = trainingset->getImgWidth(0);
-	this->iHeight = trainingset->getImgHeight(0);
-	this->nChannels = trainingset->getNChannels();
-
-}
 
 
 ANode* GPUAdapter::PushTreeToGPU(int n)
@@ -164,21 +124,13 @@ void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, ui
 {
     vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(this->ts->vectSelectedImagesIndices[imageId]);
     assert(pFeatureImages!=NULL);
-    int16_t w = (*pFeatureImages)[0].cols;
-    int16_t h = (*pFeatureImages)[0].rows;
- 
-	cout << "w:"<<w<<endl;
-	cout << "h:"<<h<<endl;
-	cout << "nChannels:"<<this->nChannels<<endl;
 	
-    float *flat = (float *) malloc (sizeof(float)*w*h*(this->nChannels));
+    float *flat = (float *) malloc (sizeof(float)*this->iWidth*this->iHeight*(this->nChannels));
     if (flat==NULL)
     {
     	std::cerr << "Cannot allocate flat feature data\n";
     	exit(1);
     }
-    this->iWidth = w;
-    this->iHeight = h;
     
     for (int c=0; c<this->nChannels; ++c)
     for (int x=0; x<this->iWidth; ++x)
@@ -211,6 +163,9 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     	exit(1);
     }
     
+    /*this->iWidth = w;
+    this->iHeight = h;*/
+
     for (int c=0; c<this->nChannels; ++c)
     for (int x=0; x<w; ++x)
     for (int y=0; y<h; ++y)
@@ -225,14 +180,20 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
 }
 void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
+    std::cout << "Launching PreKernel\n"; 
+
     this->ts = pTS;
     this->pImageData = this->ts->pImageData;
-    std::cout << "Launching PreKernel\n"; 
     this->treeTabCount = cr->numTrees;
-	this->treeAsTab = new ANode*[this->treeTabCount];
+    this->nChannels = this->ts->getNChannels();
+    this->iWidth = this->ts->getImgWidth(0);
+    this->iHeight = this->ts->getImgHeight(0);
+    this->numLabels = cr->numLabels;
+    int lPXOff = cr->labelPatchWidth / 2;
+    int lPYOff = cr->labelPatchHeight / 2;
 
+	this->treeAsTab = new ANode*[this->treeTabCount];
 	
-	 this->nChannels = this->ts->getNChannels();
 	for(size_t t = 0; t < this->treeTabCount; ++t)
     {
     	this->AddTree(&(forest[t]));
@@ -246,14 +207,13 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 	
 	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
-    this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->iWidth), &(this->iHeight));
+    this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->w_integral), &(this->h_integral));
 
-    this->numLabels = cr->numLabels;
-    int lPXOff = cr->labelPatchWidth / 2;
-    int lPYOff = cr->labelPatchHeight / 2;
 
     std::cout << "Succesfull PreKernel\n"; 
 
+    cout << "w, h " << this->iWidth<<","<<this->iHeight << endl;
+    cout << "w_i, h_i " << this->w_integral <<","<<this->h_integral << endl;
 }
 void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
 {
@@ -277,7 +237,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
         // Iterate over all trees
         for(size_t t = 0; t < /*2*/this->treeTabCount; ++t)
         {
-            cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
         	// The prediction itself.
         	// The given Sample object s contains the imageId and the pixel coordinates.
             // p is an iterator to a vector over labels (attribut hist of class Prediction)
@@ -285,25 +244,27 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
             // (this is the structured version of a random forest!)
            // vector<uint32_t>::const_iterator p = forest[t].predictPtr(s);
 
-            predict(&returnStartHistTab, &returnCountHistTab, this->treeAsTab[t], this->iWidth, this->iHeight, this->features, this->features_integral, s);
+            predict(&returnStartHistTab, &returnCountHistTab, this->treeAsTab[t], this->iWidth, this->iHeight, this->w_integral, this->h_integral, this->features, this->features_integral, s);
             int p = returnStartHistTab;
             
+            if(s.x == 0 && s.y == 0 && t == 0)
+                cout << "*p (0, 0, 0) = "<<this->common_hist_tab[p]<<endl;
+
            // cout << "p : " << p << endl;
             for (pt.y=(int)s.y-this->lPYOff;pt.y<=(int)s.y+(int)this->lPYOff;++pt.y)
             for (pt.x=(int)s.x-(int)this->lPXOff;pt.x<=(int)s.x+(int)this->lPXOff;++pt.x,++p)
             {
-            	
-
+            	            
                 if (box.contains(pt))
 				{	
 					if (this->common_hist_tab[p]<0 || this->common_hist_tab[p] >= (size_t)this->numLabels)
-					{
-						cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
-						cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
-						cout << "*p : " << this->common_hist_tab[p] << endl;
-						std::cerr << "Invalid label in prediction: " << (int) this->common_hist_tab[p] << "\n";
-						exit(1);
-					}
+                    {
+                        cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
+                        cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
+                        cout << "*p : " << this->common_hist_tab[p] << endl;
+                        std::cerr << "Invalid label in prediction: " << (int) this->common_hist_tab[p] << "\n";
+                        exit(1);
+                    }
                     result[this->common_hist_tab[p]].at<float>(pt) += 1;
                     //result[*p].at<float>(pt) += 1;
                 }

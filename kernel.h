@@ -16,10 +16,10 @@ float gpuGetValueIntegral (float *gpuFeaturesIntegral, uint8_t channel,
 
 
 /*__device__*/
-SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, int16_t h, float *gpuFeatures, float *gpuFeaturesIntegral);
+SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float *gpuFeatures, float *gpuFeaturesIntegral);
 
 /*__device__*/
-void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int16_t w, int16_t h, float* features, float* features_integral, Sample<float> &sample);
+void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, Sample<float> &sample);
 
 
 #endif
