@@ -268,9 +268,6 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 
 
     std::cout << "Succesfull PreKernel\n"; 
-
-    cout << "w, h " << this->iWidth<<","<<this->iHeight << endl;
-    cout << "w_i, h_i " << this->w_integral <<","<<this->h_integral << endl;
 }
 void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
 {
@@ -309,17 +306,17 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
             for (pt.y=(int)s.y-this->lPYOff;pt.y<=(int)s.y+(int)this->lPYOff;++pt.y)
             for (pt.x=(int)s.x-(int)this->lPXOff;pt.x<=(int)s.x+(int)this->lPXOff;++pt.x,++p)
             {
-            	            
-                if (box.contains(pt))
-				{	
-					if (this->common_hist_tab[p]<0 || this->common_hist_tab[p] >= (size_t)this->numLabels)
+            	   if (this->common_hist_tab[p]<0 || this->common_hist_tab[p] >= (size_t)this->numLabels)
                     {
                         cout << "x:" << s.x << " y:"<<s.y << " tree:"<< t << endl;
                         cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
                         cout << "*p : " << this->common_hist_tab[p] << endl;
                         std::cerr << "Invalid label in prediction: " << (int) this->common_hist_tab[p] << "\n";
                         exit(1);
-                    }
+                    }         
+                if (box.contains(pt))
+				{	
+					
                     result[this->common_hist_tab[p]].at<float>(pt) += 1;
                     //result[*p].at<float>(pt) += 1;
                 }

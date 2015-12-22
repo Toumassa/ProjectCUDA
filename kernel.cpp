@@ -13,9 +13,8 @@ float gpuGetValue (float *gpuFeatures, uint8_t channel,
 float gpuGetValueIntegral (float *gpuFeaturesIntegral, uint8_t channel, 
     int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t w, int16_t h)
 {
-  //cout << "before gpuGetValueIntegral\n";
     float res = (
-        gpuFeaturesIntegral[y2 + x2*h + channel*w*h] -
+            gpuFeaturesIntegral[y2 + x2*h + channel*w*h] -
             gpuFeaturesIntegral[y2 + x1*h + channel*w*h] -
             gpuFeaturesIntegral[y1 + x2*h + channel*w*h] +
             gpuFeaturesIntegral[y1 + x1*h + channel*w*h]);
@@ -31,7 +30,7 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
    //sample.value = this->ts->getValue(sample.imageId, splitData.channel0, sample.x, sample.y); //, sample.x+1, sample.y+1);
   sample.value = gpuGetValue(gpuFeatures, splitData.channel0, sample.x, sample.y, w, h);
   SplitResult centerResult = (sample.value < splitData.thres) ? SR_LEFT : SR_RIGHT;
-    if ((int)splitData.fType == 0) // single probe (center only)
+    if (splitData.fType == 0) // single probe (center only)
     {
         return centerResult;
     }
@@ -51,7 +50,7 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
     }
     else
     {
-      if ((int)splitData.fType == 1) // single probe (center - offset)
+      if (splitData.fType == 1) // single probe (center - offset)
       {
         int16_t norm1 = (pt2.x - pt1.x) * (pt2.y - pt1.y);
         sample.value -= gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1;
@@ -74,12 +73,12 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
         int16_t norm1 = (pt2.x - pt1.x) * (pt2.y - pt1.y);
         int16_t norm2 = (pt4.x - pt3.x) * (pt4.y - pt3.y);
 
-        if ((int)splitData.fType == 2)    // sum of pair probes
+        if (splitData.fType == 2)    // sum of pair probes
         {
           sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1
                        + gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w_i, h_i) / norm2;
         }
-        else if ((int)splitData.fType == 3)  // difference of pair probes
+        else if (splitData.fType == 3)  // difference of pair probes
         {
           sample.value = gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel0, pt1.x, pt1.y, pt2.x, pt2.y, w_i, h_i) / norm1
                        - gpuGetValueIntegral(gpuFeaturesIntegral, splitData.channel1, pt3.x, pt3.y, pt4.x, pt4.y, w_i, h_i) / norm2;
