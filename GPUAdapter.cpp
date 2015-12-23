@@ -283,14 +283,16 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     for(int j = 0; j < result.size(); ++j)
         result[j] = Mat::zeros(box.size(), CV_32FC1);
 
-    // Iterate over input image pixels
-    for(s.y = 0; s.y < box.height; ++s.y)
-    for(s.x = 0; s.x < box.width; ++s.x)
+    
+    for(size_t t = 0; t < /*2*/this->treeTabCount; ++t)
     {
+    // Iterate over input image pixels
+        for(s.y = 0; s.y < box.height; ++s.y)
+        for(s.x = 0; s.x < box.width; ++s.x)
+        {
         // Obtain forest predictions
         // Iterate over all trees
-        for(size_t t = 0; t < /*2*/this->treeTabCount; ++t)
-        {
+        
         	// The prediction itself.
         	// The given Sample object s contains the imageId and the pixel coordinates.
             // p is an iterator to a vector over labels (attribut hist of class Prediction)
