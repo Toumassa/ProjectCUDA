@@ -246,8 +246,8 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
     this->iWidth = this->ts->getImgWidth(0);
     this->iHeight = this->ts->getImgHeight(0);
     this->numLabels = cr->numLabels;
-    int lPXOff = cr->labelPatchWidth / 2;
-    int lPYOff = cr->labelPatchHeight / 2;
+    this->lPXOff = cr->labelPatchWidth / 2;
+    this->lPYOff = cr->labelPatchHeight / 2;
 
 	this->treeAsTab = new ANode*[this->treeTabCount];
 	
