@@ -130,3 +130,32 @@ void predict(int *returnStartHistTab, int *returnCountHistTab, ANode* tree, int1
     
     //cout << "returning start, offset:" << (*returnStartHistTab) <<","<<(*returnCountHistTab) <<endl;
 }
+
+
+void copyTreeToGPU(ANode *cpuTree, ANode**gpuTree, int treeSize)
+{
+	cudaError_t ok;
+	size_t size = 30*sizeof(float);
+
+	//printFreeGPUMem("CUDA Malloc features: ");
+
+	// Allocate GPU memory for the features and transfer
+	// them from host memory to GPU memory
+	float *a = NULL;
+//	size=treeSize*sizeof(ANode);
+	ok=cudaMalloc ((void**) &a, size);
+	
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "Error gpu allocation for tree:"<<cudaGetErrorString(ok)<<"\n";
+		exit(1);
+	}
+	/*//CHECK_CUDA_MALLOC;
+	ok=cudaMemcpy (*gpuTree, cpuTree, size, cudaMemcpyHostToDevice);
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "Error memcpy RAM to GPU for tree storage\n";
+		exit(1);
+	}
+	//CHECK_CUDA_CPY2GPU;*/
+}
