@@ -126,6 +126,8 @@ void GPUAdapter::treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*
 	int id=0;
 	
     treeToVectorRecursif(treeAsVector, (*tree).root());
+    
+    
 }
 
 GPUAdapter::~GPUAdapter()
@@ -137,11 +139,11 @@ GPUAdapter::~GPUAdapter()
 		delete (*vi);
 	}
 
-    for(int i = 0; i < this->treeTabCount; i++)
-    {
-        delete[] this->treeAsTab[i];
-    }
-    delete[] this->treeAsTab;
+    //for(int i = 0; i < this->treeTabCount; i++)
+    //{
+        //delete[] this->treeAsTab[i];
+    //}
+    //delete[] this->treeAsTab;
 
     delete[] this->features;
     delete[] this->features_integral;
@@ -152,7 +154,10 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 
 	vector<ANode> *treeVector = new vector<ANode>();
 
+	
     treeToVector(treeVector, inputTree);
+	/*for(int i = 0; i < treeVector->size(); i++)
+		cout << "*p=" << (*treeVector)[i].common_hist_tab_offset <<endl;*/
 
     cout << "Tree Size: " << treeVector->size()<<endl;
 
