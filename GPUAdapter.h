@@ -61,21 +61,33 @@ public:
 	~GPUAdapter();
 	void AddTree(StrucClassSSF<float>*tree);
 
+	void testCPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 	void testGPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 
 	void preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS);
 
-	ANode* PushTreeToGPU(int);
+	ANode* PushTreeToCPU(int);
+	void PushTreeToGPU(int);
 private:
 	vector<vector<ANode>* > treesAsVector;
 	ANode **treeAsTab;
+	vector<ANode*> _treeAsTab;
 	unsigned int treeTabCount;
 
 	float *features;
 	float *features_integral;
+	
+	float *_features;
+	float *_features_integral;
+	
+	int fSize;
+	int fIntegralSize;
+	
 
 	vector<uint32_t> common_hist_tab; 
-	vector<float> common_p_tab; 
+	
+	uint32_t *_common_hist_tab;
+	//vector<float> common_p_tab; 
 
 	ImageData *pImageData;
 	uint16_t iWidth, iHeight, nChannels, numLabels;

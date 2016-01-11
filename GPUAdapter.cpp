@@ -79,9 +79,12 @@ int GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float
 
         anode.common_hist_tab_offset = this->common_hist_tab.size();
         anode.common_hist_tab_size = predict.hist.size();
+        int max = 0;
+        int min = 0;
         for(int i =0; i < anode.common_hist_tab_size ;i++)
         {
             this->common_hist_tab.push_back(predict.hist[i]);
+           
         }
 
             //Adding node's p vector to common vector with saving
@@ -157,8 +160,7 @@ void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 }
 
 
-
-ANode* GPUAdapter::PushTreeToGPU(int n)
+ANode* GPUAdapter::PushTreeToCPU(int n)
 {
 	if(n < 0 || n > this->treesAsVector.size())
 	{
@@ -177,12 +179,14 @@ ANode* GPUAdapter::PushTreeToGPU(int n)
 
 
 
+
 void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, uint16_t *out_nbChannels)
 {
     vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(this->ts->vectSelectedImagesIndices[imageId]);
     assert(pFeatureImages!=NULL);
 	
-    float *flat = (float *) malloc (sizeof(float)*this->iWidth*this->iHeight*(this->nChannels));
+	this->fSize =this->iWidth*this->iHeight*(this->nChannels);
+    float *flat = (float *) malloc (sizeof(float)*fSize);
     if (flat==NULL)
     {
     	std::cerr << "Cannot allocate flat feature data\n";
@@ -213,7 +217,8 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     int16_t w = (*pFeatureImages)[0].cols;
     int16_t h = (*pFeatureImages)[0].rows;
     
-    float *flat = (float *) malloc ((int)sizeof(float)*w*h*(this->nChannels));
+    this->fIntegralSize = w*h*(this->nChannels);
+    float *flat = (float *) malloc ((int)sizeof(float)*fIntegralSize);
     if (flat==NULL)
     {
     	std::cerr << "Cannot allocate flat integral feature data\n";
@@ -235,45 +240,10 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     
     cout << "getFlattenedIntegralFeatures - ok" << endl;
 }
-void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
+
+void GPUAdapter::testCPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
 {
-    std::cout << "Launching PreKernel\n"; 
-
-    this->ts = pTS;
-    this->pImageData = this->ts->pImageData;
-    this->treeTabCount = cr->numTrees;
-    this->nChannels = this->ts->getNChannels();
-    this->iWidth = this->ts->getImgWidth(0);
-    this->iHeight = this->ts->getImgHeight(0);
-    this->numLabels = cr->numLabels;
-    this->lPXOff = cr->labelPatchWidth / 2;
-    this->lPYOff = cr->labelPatchHeight / 2;
-
-	this->treeAsTab = new ANode*[this->treeTabCount];
-	
-	for(size_t t = 0; t < this->treeTabCount; ++t)
-    {
-    	this->AddTree(&(forest[t]));
-    }
-
-    for(int i = 0; i < this->treeTabCount; i++)
-    {
-        //actually implemented to CPU
-    	this->treeAsTab[i] = PushTreeToGPU(i);
-    }
-	
-	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
-    this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
-    this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->w_integral), &(this->h_integral));
-
-	ANode *gpuTree = NULL;
-	copyTreeToGPU(treeAsTab[0], &gpuTree, 2005);
-
-    std::cout << "Succesfull PreKernel\n"; 
-}
-void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
-{
-    int returnStartHistTab, returnCountHistTab;
+    /*int returnStartHistTab, returnCountHistTab;
 
     cv::Point pt;
 
@@ -286,7 +256,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
         result[j] = Mat::zeros(box.size(), CV_32FC1);
 
     
-    for(size_t t = 0; t < /*2*/this->treeTabCount; ++t)
+    for(size_t t = 0; t < this->treeTabCount; ++t)
     {
     // Iterate over input image pixels
         for(s.y = 0; s.y < box.height; ++s.y)
@@ -345,6 +315,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 
         (*mapResult).at<uint8_t>(pt) = (uint8_t)maxIdx;
     }
-
+*/
 
 }
