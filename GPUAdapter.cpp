@@ -266,8 +266,8 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
     this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->w_integral), &(this->h_integral));
 
-	ANode **gpuTree;
-	copyTreeToGPU(treeAsTab[0], gpuTree, 2005);
+	ANode *gpuTree = NULL;
+	copyTreeToGPU(treeAsTab[0], &gpuTree, 2005);
 
     std::cout << "Succesfull PreKernel\n"; 
 }
