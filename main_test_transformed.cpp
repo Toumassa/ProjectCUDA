@@ -42,7 +42,7 @@ using namespace vision;
 
 void usage (char *com) 
 {
-    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix>\n"
+    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix> <[0|1] -> CPU | GPU>\n"
         ;
     exit(1);
 }
@@ -81,7 +81,7 @@ inline float profilingTime (const char *s, time_t *whichClock)
 
 
 
-void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
+void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS, int execMode)
 {
     GPUAdapter newGPUAdapter;
     int iImage;
@@ -89,9 +89,24 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     cv::Mat matConfusion;
     char strOutput[200];
     
+	
+	if(execMode ==1)
+	{
+		newGPUAdapter.init(forest, cr);
+		profiling("Init");
+	}
     /**/
     // Process all test images
     // result goes into ====> result[].at<>(pt)
+	
+	if(execMode ==1)
+	{
+		
+	}
+	else
+	{
+		profiling("");
+	}
     for (iImage = 0; iImage < pTS->getNbImages(); ++iImage)
     {
     	// Create a sample object, which contains the imageId
@@ -100,83 +115,79 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         s.imageId = iImage;
         cv::Rect box(0, 0, pTS->getImgWidth(s.imageId), pTS->getImgHeight(s.imageId));
         cv::Mat mapResult = cv::Mat::ones(box.size(), CV_8UC1) * cr->numLabels;
-	
-		newGPUAdapter.init(forest, cr);
-        profiling("Init");
-        newGPUAdapter.preKernel(s.imageId, cr, pTS);
-        // ==============================================
-        // THE CLASSICAL CPU SOLUTION
-        // ==============================================
+		
+		if(execMode == 1)
+		{
+			//profiling("");
+			newGPUAdapter.preKernel(s.imageId, cr, pTS);
+			//profiling("PreKernel");
+			newGPUAdapter.testGPUSolution(box, s);
+			newGPUAdapter.postKernel(&mapResult);
+			profiling("[!]  Prediction ");
+			//profiling("PostKernel");
+		}
+		else
+		{
+			int lPXOff = cr->labelPatchWidth / 2;
+			int lPYOff = cr->labelPatchHeight / 2;
 
-        profiling("PreKernel");
-        newGPUAdapter.testGPUSolution(box, s);
-        /*
-        int lPXOff = cr->labelPatchWidth / 2;
-    	int lPYOff = cr->labelPatchHeight / 2;
-
-        // Initialize the result matrices
-        vector<cv::Mat> result(cr->numLabels);
-        for(int j = 0; j < result.size(); ++j)
-            result[j] = Mat::zeros(box.size(), CV_32FC1);
-        
-        // Iterate over input image pixels
-        for(s.y = 0; s.y < box.height; ++s.y)
-        for(s.x = 0; s.x < box.width; ++s.x)
-        {
-            // Obtain forest predictions
-            // Iterate over all trees
-            for(size_t t = 0; t < cr->numTrees; ++t)
-            {
-            	// The prediction itself.
-            	// The given Sample object s contains the imageId and the pixel coordinates.
-                // p is an iterator to a vector over labels (attribut hist of class Prediction)
-                // This labels correspond to a patch centered on position s
-                // (this is the structured version of a random forest!)
-                vector<uint32_t>::const_iterator p = forest[t].predictPtr(s);
-
-
-                for (pt.y=(int)s.y-lPYOff;pt.y<=(int)s.y+(int)lPYOff;++pt.y)
-                for (pt.x=(int)s.x-(int)lPXOff;pt.x<=(int)s.x+(int)lPXOff;++pt.x,++p)
-                {
-                	if (*p<0 || *p >= (size_t)cr->numLabels)
-                	{
-                		std::cerr << "Invalid label in prediction: " << (int) *p << "\n";
-                		exit(1);
-                	}
-
-                    if (box.contains(pt))
-                    {
-                        result[*p].at<float>(pt) += 1;
-
-                    }
-                }
-
-            }
-        }
-
-        // Argmax of result ===> mapResult
-        size_t maxIdx;
-        for (pt.y = 0; pt.y < box.height; ++pt.y)
-        for (pt.x = 0; pt.x < box.width; ++pt.x)
-        {
-            maxIdx = 0;
+			// Initialize the result matrices
+			vector<cv::Mat> result(cr->numLabels);
+			for(int j = 0; j < result.size(); ++j)
+				result[j] = Mat::zeros(box.size(), CV_32FC1);
+			
+			// Iterate over input image pixels
+			for(s.y = 0; s.y < box.height; ++s.y)
+			for(s.x = 0; s.x < box.width; ++s.x)
+			{
+				// Obtain forest predictions
+				// Iterate over all trees
+				for(size_t t = 0; t < cr->numTrees; ++t)
+				{
+					// The prediction itself.
+					// The given Sample object s contains the imageId and the pixel coordinates.
+					// p is an iterator to a vector over labels (attribut hist of class Prediction)
+					// This labels correspond to a patch centered on position s
+					// (this is the structured version of a random forest!)
+					vector<uint32_t>::const_iterator p = forest[t].predictPtr(s);
 
 
-            for(int j = 1; j < cr->numLabels; ++j)
-            {
+					for (pt.y=(int)s.y-lPYOff;pt.y<=(int)s.y+(int)lPYOff;++pt.y)
+					for (pt.x=(int)s.x-(int)lPXOff;pt.x<=(int)s.x+(int)lPXOff;++pt.x,++p)
+					{
+						if (*p<0 || *p >= (size_t)cr->numLabels)
+						{
+							std::cerr << "Invalid label in prediction: " << (int) *p << "\n";
+							exit(1);
+						}
 
-                maxIdx = (result[j].at<float>(pt) > result[maxIdx].at<float>(pt)) ? j : maxIdx;
-            }
+						if (box.contains(pt))
+						{
+							result[*p].at<float>(pt) += 1;
 
-            mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
-        }
-        */
-        profiling("Prediction");
+						}
+					}
 
-        newGPUAdapter.postKernel(&mapResult);
-		profiling("PostKernel");
-		newGPUAdapter.destroy();
-		profiling("Destroy");
+				}
+			}
+
+			// Argmax of result ===> mapResult
+			size_t maxIdx;
+			for (pt.y = 0; pt.y < box.height; ++pt.y)
+			for (pt.x = 0; pt.x < box.width; ++pt.x)
+			{
+				maxIdx = 0;
+
+
+				for(int j = 1; j < cr->numLabels; ++j)
+				{
+
+					maxIdx = (result[j].at<float>(pt) > result[maxIdx].at<float>(pt)) ? j : maxIdx;
+				}
+
+				mapResult.at<uint8_t>(pt) = (uint8_t)maxIdx;
+			}
+		}
 		
         // Write segmentation map
         sprintf(strOutput, "%s/segmap_1st_stage%04d.png", cr->outputFolder.c_str(), iImage);
@@ -197,6 +208,19 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
             return;
         } 
     }    
+	if(execMode ==1)
+	{
+		
+	}
+	else
+	{
+		profiling("[!]  Prediction ");
+	}
+	if(execMode == 1)
+	{
+		newGPUAdapter.destroy();
+		profiling("Destroy");
+	}
 
 }
 
@@ -211,7 +235,7 @@ int main(int argc, char* argv[])
     ImageData *idata = new ImageDataFloat();
     TrainingSetSelection<float> *pTrainingSet;
     bool bTestAll = false;
-    int optNumTrees=-1;
+    int optNumTrees=-1, executionType=0;
     char *optTreeFnamePrefix=NULL;
     char buffer[2048];
 
@@ -225,13 +249,14 @@ int main(int argc, char* argv[])
 		<< "******************************************************\n";
 #endif
 
-    if (argc!=4)
+    if (argc!=5)
         usage(*argv);
     else
     {
         strConfigFile = argv[1];
         optNumTrees = atoi(argv[2]);
         optTreeFnamePrefix = argv[3];
+        executionType = atoi(argv[4]);
     }
 
     if (cr.readConfigFile(strConfigFile)==false)
@@ -283,7 +308,12 @@ int main(int argc, char* argv[])
     cout << "done!" << endl;
     profiling("Tree loading");
     
-    testStructClassForest(forest, &cr, pTrainingSet);
+	int execMode = 0;
+	
+	if(executionType==1)
+		execMode = 1;
+	
+    testStructClassForest(forest, &cr, pTrainingSet, execMode);
 
     // delete tree;
     delete pTrainingSet;
