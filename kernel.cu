@@ -276,16 +276,23 @@ void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelect
 	int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
 	this->result = (int*)malloc(size);
 	
-	for(int i =0; i < this->iWidth*this->iHeight*this->numLabels; i++)
+	/*for(int i =0; i < this->iWidth*this->iHeight*this->numLabels; i++)
 	{
 		this->result[i] = 0;
-	}
+	}*/
     
-	ok = cudaMalloc((void**) &this->resultGPU, size);
-	
-	if(ok != cudaSuccess)
+	ok = cudaMalloc((void**) &this->resultGPU, size);if(ok != cudaSuccess)
 	{
 		std::cerr << "Error gpu allocation this->resultGPU:"<<cudaGetErrorString(ok)<<"\n";
+		exit(1);
+	}
+	ok= cudaMemset  ( this->resultGPU,
+                            0,
+                           size    
+                        )  ;
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "Error gpuresult initializing:"<<cudaGetErrorString(ok)<<"\n";
 		exit(1);
 	}
 	ok=cudaMemcpy (this->resultGPU, this->result, size, cudaMemcpyHostToDevice);
