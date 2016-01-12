@@ -83,19 +83,12 @@ inline float profilingTime (const char *s, time_t *whichClock)
 
 void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
-	cout << "---test---GPUAdapter" << endl; 
-
-
     GPUAdapter newGPUAdapter;
-
-
     int iImage;
     cv::Point pt;
     cv::Mat matConfusion;
     char strOutput[200];
     
-
-
     /**/
     // Process all test images
     // result goes into ====> result[].at<>(pt)
@@ -104,20 +97,18 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     	// Create a sample object, which contains the imageId
         Sample<float> s;
 
-        std::cout << "Testing image nr. " << iImage+1 << "\n";
-
         s.imageId = iImage;
         cv::Rect box(0, 0, pTS->getImgWidth(s.imageId), pTS->getImgHeight(s.imageId));
         cv::Mat mapResult = cv::Mat::ones(box.size(), CV_8UC1) * cr->numLabels;
 	
-		newGPUAdapter.loadTreesGPU( forest, cr);
+		newGPUAdapter.init(forest, cr);
+        profiling("Init");
         newGPUAdapter.preKernel(s.imageId, cr, pTS);
         // ==============================================
         // THE CLASSICAL CPU SOLUTION
         // ==============================================
 
-        profiling("");
-
+        profiling("PreKernel");
         newGPUAdapter.testGPUSolution(box, s);
         /*
         int lPXOff = cr->labelPatchWidth / 2;
@@ -183,6 +174,10 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         profiling("Prediction");
 
         newGPUAdapter.postKernel(&mapResult);
+		profiling("PostKernel");
+		newGPUAdapter.destroy();
+		profiling("Destroy");
+		
         // Write segmentation map
         sprintf(strOutput, "%s/segmap_1st_stage%04d.png", cr->outputFolder.c_str(), iImage);
         if (cv::imwrite(strOutput, mapResult)==false)

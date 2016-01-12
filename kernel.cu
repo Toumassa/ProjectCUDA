@@ -108,16 +108,12 @@ void GPUAdapter::PushTreeToGPU(int n)
 	}
 
 	//change with malloc GPU
-	
 	ANode *treeToGPU;
 	
-	ANode *tree = new ANode[this->treesAsVector[n]->size()];
+	/*for(int i = 0; i < this->treesAsVector[n]->size();i++)
+		tree[i]=(*this->treesAsVector[n])[i];*/
 	
-	for(int i = 0; i < this->treesAsVector[n]->size();i++)
-		tree[i]=(*this->treesAsVector[n])[i];
-	
-	copyTreeToGPU(tree, &treeToGPU, this->treesAsVector[n]->size());
-	
+	copyTreeToGPU(this->treesAsVector[n]->data(), &treeToGPU, this->treesAsVector[n]->size());
 	
 	_treeAsTab.push_back(treeToGPU);
 }
@@ -233,11 +229,28 @@ void predict(int *returnStartHistTab, ANode* tree, int16_t w, int16_t h, int16_t
     }
     (*returnStartHistTab) = tree[curNode].common_hist_tab_offset;
 }
+/**
+	Copies data which doesnt depend on images
+*/
+void GPUAdapter::init(StrucClassSSF<float> *forest, ConfigReader *cr)
+{
+	this->treeTabCount = cr->numTrees;
+	for(size_t t = 0; t < this->treeTabCount; ++t)
+    {
+    	this->AddTree(&(forest[t]));
+    }
 
+	for(int i = 0; i < this->treeTabCount; i++)
+    {
+    	PushTreeToGPU(i);
+    }
+	
+	copyCommonHistTabToGPU(common_hist_tab.data(), &_common_hist_tab, this->common_hist_tab.size());
+	
+	common_hist_tab.clear();
+}
 void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
-    std::cout << "Launching PreKernel\n"; 
-
 	cudaError_t ok;
     this->ts = pTS;
     
@@ -252,24 +265,12 @@ void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelect
 	
   
     
-	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
     this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->w_integral), &(this->h_integral));
 
-
-   
-    
     copyFeaturesToGPU(this->features, this->fSize, 
 						this->features_integral, this->fIntegralSize, 
 						&this->_features, &this->_features_integral);
-	
-	
-	uint32_t*hist = new uint32_t[this->common_hist_tab.size()];
-	for(int i =0; i < this->common_hist_tab.size();i++)
-	{
-		hist[i] = common_hist_tab[i];
-	}
-	copyCommonHistTabToGPU(hist, &_common_hist_tab, this->common_hist_tab.size());
 	
 	
 	int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
@@ -282,7 +283,6 @@ void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelect
     
 	ok = cudaMalloc((void**) &this->resultGPU, size);
 	
-	
 	if(ok != cudaSuccess)
 	{
 		std::cerr << "Error gpu allocation this->resultGPU:"<<cudaGetErrorString(ok)<<"\n";
@@ -294,15 +294,13 @@ void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelect
 		std::cerr << "Error memcpy RAM to GPU for tree this->result\n";
 		exit(1);
 	}
-	
 	if(this->result == NULL)
 	{
 		std::cerr << " HOST memory allocation failed" << endl;
 		exit(1);
 	}
-	
-	
-    std::cout << "Succesfull PreKernel\n"; 
+	delete [] this->features;
+	delete [] this->features_integral;
 }
 
 __global__
@@ -392,6 +390,20 @@ void GPUAdapter::postKernel(cv::Mat*mapResult)
 		pt.x = ptx;
 		pt.y = pty;
         (*mapResult).at<uint8_t>(pt) = (uint8_t)maxIdx;
-	
     }
+	
+	delete [] this->result;
+	cudaFree(this->resultGPU);
+	cudaFree(this->_features);
+	cudaFree(this->_features_integral);
+}
+
+
+void GPUAdapter::destroy()
+{
+	for(int i=0; i < _treeAsTab.size();i++)
+	{
+		cudaFree(_treeAsTab[i]);
+	}
+	cudaFree(_common_hist_tab);
 }

@@ -1,70 +1,10 @@
 #include "GPUAdapter.h"
 #include "kernel.h"
 
-
-/*void GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node, int parent,int id, int* id_counter)
-{
-	 
-     ANode anode;
-     anode.id = id;
-     anode.parent = parent;
-     //node filling
-		//TNode attributes
-		 anode.depth=node->getDepth();
-		 anode.start=node->getStart();
-		 anode.end=node->getEnd();
-		 anode.idx=node->getIdx();
-		//Prediction attributes
-		Prediction predict=node->getPrediction();
-		anode.histSize=predict.n;
-
-			//Adding node's hist vector to common vector with saving
-			//           offset and size in nodes informations
-
-		anode.common_hist_tab_offset = this->common_hist_tab.size();
-		anode.common_hist_tab_size = predict.hist.size();
-		for(int i =0; i < anode.common_hist_tab_size ;i++)
-		{
-			this->common_hist_tab.push_back(predict.hist[i]);
-		}
-
-			//Adding node's p vector to common vector with saving
-			//           offset and size in nodes informations
-		/*anode.common_p_tab_offset = this->common_p_tab.size();
-		anode.common_p_tab_size = predict.p.size();
-		
-		for(int i =0; i < anode.common_p_tab_size;i++)
-		{
-			this->common_p_tab.push_back(predict.p[i]);
-		}
-
-
-		anode.splitData = node->splitData;
-		
-     if(!(node->isLeaf()))
-	 {
-		anode.left = ++(*id_counter);
-		anode.right = ++(*id_counter);
-	 }
-	  else
-	 {
-		 anode.left = -1;
-		 anode.right = -1;
-	 }
-	 arbre->push_back(anode);
-
-	 if(!(node->isLeaf()))
-	 {
-		 
-		 treeToVectorRecursif(arbre, node->getLeft(), anode.id,anode.left, id_counter);
-		 treeToVectorRecursif(arbre, node->getRight(), anode.id,anode.right, id_counter);
-	 }
-} */
 int GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float>, Prediction> *node)
 {
         ANode anode;
     
-     //node filling
         //TNode attributes
          anode.depth=node->getDepth();
          anode.start=node->getStart();
@@ -73,9 +13,6 @@ int GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float
         //Prediction attributes
         Prediction predict=node->getPrediction();
         anode.histSize=predict.n;
-
-            //Adding node's hist vector to common vector with saving
-            //           offset and size in nodes informations
 
         anode.common_hist_tab_offset = this->common_hist_tab.size();
         anode.common_hist_tab_size = predict.hist.size();
@@ -87,24 +24,11 @@ int GPUAdapter::treeToVectorRecursif(vector<ANode> *arbre, TNode<SplitData<float
            
         }
 
-            //Adding node's p vector to common vector with saving
-            //           offset and size in nodes informations
-        /*anode.common_p_tab_offset = this->common_p_tab.size();
-        anode.common_p_tab_size = predict.p.size();
-        
-        for(int i =0; i < anode.common_p_tab_size;i++)
-        {
-            this->common_p_tab.push_back(predict.p[i]);
-        }*/
-
-
         anode.splitData = node->splitData;
         anode.id = arbre->size();
 
         arbre->push_back(anode);
 
-
-        //cout << anode.id << endl;
 
      if(!(node->isLeaf()))
      {
@@ -126,41 +50,22 @@ void GPUAdapter::treeToVector(vector<ANode> *treeAsVector, StrucClassSSF<float>*
 	int id=0;
 	
     treeToVectorRecursif(treeAsVector, (*tree).root());
-    
-    
 }
 
 GPUAdapter::~GPUAdapter()
 {
-    std::cout << "Destroying " << endl;
 	std::vector<vector<ANode>*>::iterator vi;
 	for(vi = this->treesAsVector.begin(); vi != this->treesAsVector.end();vi++)
 	{
 		delete (*vi);
 	}
-
-    //for(int i = 0; i < this->treeTabCount; i++)
-    //{
-        //delete[] this->treeAsTab[i];
-    //}
-    //delete[] this->treeAsTab;
-
-    delete[] this->features;
-    delete[] this->features_integral;
 }
 
 void GPUAdapter::AddTree(StrucClassSSF<float>*inputTree)
 {
-
 	vector<ANode> *treeVector = new vector<ANode>();
 
-	
     treeToVector(treeVector, inputTree);
-	/*for(int i = 0; i < treeVector->size(); i++)
-		cout << "*p=" << (*treeVector)[i].common_hist_tab_offset <<endl;*/
-
-    cout << "Tree Size: " << treeVector->size()<<endl;
-
     this->treesAsVector.push_back(treeVector);
 }
 
@@ -184,19 +89,6 @@ ANode* GPUAdapter::PushTreeToCPU(int n)
 
 
 
-void GPUAdapter::loadTreesGPU(StrucClassSSF<float> *forest, ConfigReader *cr)
-{
-	this->treeTabCount = cr->numTrees;
-	for(size_t t = 0; t < this->treeTabCount; ++t)
-    {
-    	this->AddTree(&(forest[t]));
-    }
-
-	for(int i = 0; i < this->treeTabCount; i++)
-    {
-    	PushTreeToGPU(i);
-    }
-}
 void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, uint16_t *out_nbChannels)
 {
     vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(this->ts->vectSelectedImagesIndices[imageId]);
@@ -217,8 +109,6 @@ void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, ui
     		(*pFeatureImages)[c].at<float>(y, x);
     
     *out_features = flat;
-    //*out_nbChannels = this->nChannels;
-    cout << "getFlattenedFeatures - ok" << endl;
 }
 
 /***************************************************************************
@@ -242,8 +132,6 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     	exit(1);
     }
     
-    /*this->iWidth = w;
-    this->iHeight = h;*/
 
     for (int c=0; c<this->nChannels; ++c)
     for (int x=0; x<w; ++x)
@@ -254,8 +142,6 @@ void GPUAdapter::getFlattenedIntegralFeatures(uint16_t imageId, float **out_feat
     *out_w = w;
     *out_h = h;
     *out_features_integral = flat;
-    
-    cout << "getFlattenedIntegralFeatures - ok" << endl;
 }
 
 void GPUAdapter::testCPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)

@@ -64,11 +64,14 @@ public:
 	void testCPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 	void testGPUSolution(cv::Rect, Sample<float> &s);
 	
-	void loadTreesGPU(StrucClassSSF<float> *forest, ConfigReader *cr);
+	void init(StrucClassSSF<float> *forest, ConfigReader *cr);
+	
 	void preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelection<float> *pTS);
 	void postKernel(cv::Mat*);
 	ANode* PushTreeToCPU(int);
 	void PushTreeToGPU(int);
+	
+	void destroy();
 private:
 	vector<vector<ANode>* > treesAsVector;
 	ANode **treeAsTab;
