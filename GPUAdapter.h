@@ -65,7 +65,7 @@ public:
 	void testGPUSolution(cv::Mat*, cv::Rect, Sample<float> &s);
 
 	void preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS);
-
+	void postKernel(cv::Mat*);
 	ANode* PushTreeToCPU(int);
 	void PushTreeToGPU(int);
 private:
@@ -83,8 +83,8 @@ private:
 	int fSize;
 	int fIntegralSize;
 	
-	/*int *result;
-	int*resultGPU;*/
+	int *result;
+	int *resultGPU;
 	
 
 	vector<uint32_t> common_hist_tab; 

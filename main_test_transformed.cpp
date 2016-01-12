@@ -181,6 +181,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
         */
         profiling("Prediction");
 
+        newGPUAdapter.postKernel(&mapResult);
         // Write segmentation map
         sprintf(strOutput, "%s/segmap_1st_stage%04d.png", cr->outputFolder.c_str(), iImage);
         if (cv::imwrite(strOutput, mapResult)==false)

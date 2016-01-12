@@ -238,6 +238,7 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 {
     std::cout << "Launching PreKernel\n"; 
 
+	cudaError_t ok;
     this->ts = pTS;
     this->pImageData = this->ts->pImageData;
     this->treeTabCount = cr->numTrees;
@@ -276,6 +277,38 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 		hist[i] = common_hist_tab[i];
 	}
 	copyCommonHistTabToGPU(hist, &_common_hist_tab, this->common_hist_tab.size());
+	
+	
+	int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
+	this->result = (int*)malloc(size);
+	
+	for(int i =0; i < this->iWidth*this->iHeight*this->numLabels; i++)
+	{
+		this->result[i] = 0;
+	}
+    
+	ok = cudaMalloc((void**) &this->resultGPU, size);
+	
+	
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "Error gpu allocation this->resultGPU:"<<cudaGetErrorString(ok)<<"\n";
+		exit(1);
+	}
+	ok=cudaMemcpy (this->resultGPU, this->result, size, cudaMemcpyHostToDevice);
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "Error memcpy RAM to GPU for tree this->result\n";
+		exit(1);
+	}
+	
+	if(this->result == NULL)
+	{
+		std::cerr << " HOST memory allocation failed" << endl;
+		exit(1);
+	}
+	
+	
     std::cout << "Succesfull PreKernel\n"; 
 }
 
@@ -312,8 +345,6 @@ void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t
 void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
 {
 	int blockSize = 32;
-	cudaError_t ok;
-    cv::Point pt;
 
 	s.x = 0;
 	s.y = 0;
@@ -324,41 +355,13 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     
     
     
-    int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
-	int *result = (int*)malloc(size);
-	
-	for(int i =0; i < this->iWidth*this->iHeight*this->numLabels; i++)
-	{
-		result[i] = 0;
-	}
     
-	int *resultGPU;
-	ok = cudaMalloc((void**) &resultGPU, size);
-	
-	
-	if(ok != cudaSuccess)
-	{
-		std::cerr << "Error gpu allocation resultGPU:"<<cudaGetErrorString(ok)<<"\n";
-		exit(1);
-	}
-	ok=cudaMemcpy (resultGPU, result, size, cudaMemcpyHostToDevice);
-	if(ok != cudaSuccess)
-	{
-		std::cerr << "Error memcpy RAM to GPU for tree result\n";
-		exit(1);
-	}
-	
-	if(result == NULL)
-	{
-		std::cerr << " HOST memory allocation failed" << endl;
-		exit(1);
-	}
 	
     for(size_t t = 0; t < this->_treeAsTab.size(); ++t)
     {
 		
 		kernel<<<dimGrid, dimBlock>>>
-		(resultGPU, _treeAsTab[t], 
+		(this->resultGPU, _treeAsTab[t], 
 		this->iWidth, this->iHeight, 
 		this->w_integral, this->h_integral, 
 		this->_features, this->_features_integral, 
@@ -370,15 +373,21 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 
 	}/**/
 	
-	
-	ok=cudaMemcpy (result, resultGPU, size, cudaMemcpyDeviceToHost);
+}
+
+void GPUAdapter::postKernel(cv::Mat*mapResult)
+{
+	cudaError_t ok;
+	int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
+	ok=cudaMemcpy (this->result, this->resultGPU, size, cudaMemcpyDeviceToHost);
 	if(ok != cudaSuccess)
 	{
-		std::cerr << "Cant get result back:"<<cudaGetErrorString(ok)<<"\n";
+		std::cerr << "Cant get this->result back:"<<cudaGetErrorString(ok)<<"\n";
 		exit(1);
 	}
     int ptx, pty;
     size_t maxIdx;
+    cv::Point pt;
     for (pty = 0; pty < this->iHeight; ++pty)
     for (ptx = 0; ptx < this->iWidth; ++ptx)
     {
@@ -387,7 +396,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 	
         for(int j = 1; j < this->numLabels; ++j)
         {
-			if(result[j*this->iWidth*this->iHeight+pty*this->iWidth+ptx] > result[maxIdx*this->iWidth*this->iHeight+pty*this->iWidth+ptx])
+			if(this->result[j*this->iWidth*this->iHeight+pty*this->iWidth+ptx] > this->result[maxIdx*this->iWidth*this->iHeight+pty*this->iWidth+ptx])
 				maxIdx = j;
             
 			
@@ -395,7 +404,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		pt.x = ptx;
 		pt.y = pty;
         (*mapResult).at<uint8_t>(pt) = (uint8_t)maxIdx;
+	
     }
-
-
 }
