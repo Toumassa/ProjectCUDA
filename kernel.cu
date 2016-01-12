@@ -225,26 +225,21 @@ SplitResult split(SplitData<float> splitData, Sample<float> &sample, int16_t w, 
 __device__
 void predict(int *returnStartHistTab, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, Sample<float> sample)
 {
-  //cout << "--------------------predict" << "\n";
   int curNode = 0; //initialising to Root
-
     SplitResult sr = SR_LEFT;
     while (tree[curNode].left != -1 && sr != SR_INVALID)
     {
     sr = split(tree[curNode].splitData, sample, w, h, w_i, h_i, features, features_integral);
-    
+   
     switch (sr)
       {
       case SR_LEFT:
         curNode = tree[curNode].left;
-	     //cout << "Goes left :" << curNode << "\n";  
         break;
       case SR_RIGHT:
         curNode = tree[curNode].right;
-	       //cout << "Goes right :" << curNode << "\n"; 
         break;
       default:
-	//cout << "curnode ???" << curNode << endl;
         break;
       }
     }
@@ -303,15 +298,20 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 }
 
 __global__
-void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, 
+void kernel(int *ptab, int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, 
 		Sample<float> sample, int lPXOff, int lPYOff, uint32_t *common_hist_tab, int numLabels)
 {
+	/*for(int i = 0; i < 2005;i++)
+	    ptab[i] = tree[i].common_hist_tab_offset;*/
 	int sx = blockIdx.x*blockDim.x+threadIdx.x;
 	int sy = blockIdx.y*blockDim.y+threadIdx.y;
 	
-	int returnStartHistTab, p;
+	int p;
+	sample.x = sx;
+	sample.y = sy;
 	predict(&p, tree, w, h, w_i, h_i, features, features_integral, sample);
 	
+	//ptab[sy*w+sx]=1;
 	int ptx, pty;
 	for (pty=(int)sy-lPYOff;pty<=(int)sy+(int)lPYOff;++pty)
 	for (ptx=(int)sx-(int)lPXOff;ptx<=(int)sx+(int)lPXOff;++ptx,++p)
@@ -364,6 +364,11 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     int *resultGPU;
 	ok = cudaMalloc((void**) &resultGPU, size);
 	
+	int ptabsize = this->iWidth*this->iHeight;
+	int *_ptab;
+	ok = cudaMalloc((void**) &_ptab, ptabsize*sizeof(int));
+	int *ptab = (int*)malloc(ptabsize*sizeof(int));
+	
 	if(ok != cudaSuccess)
 	{
 		std::cerr << "Error gpu allocation resultGPU:"<<cudaGetErrorString(ok)<<"\n";
@@ -393,8 +398,8 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     {
 		
 		kernel<<<dimGrid, dimBlock>>>
-		(
-		resultGPU, _treeAsTab[t], 
+		(_ptab,
+		resultGPU, _treeAsTab[0], 
 		this->iWidth, this->iHeight, 
 		this->w_integral, this->h_integral, 
 		this->_features, this->_features_integral, 
@@ -405,6 +410,13 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		);
 
 	}/**/
+	
+	ok=cudaMemcpy (ptab, _ptab, ptabsize*sizeof(int), cudaMemcpyDeviceToHost);
+	if(ok != cudaSuccess)
+	{
+		std::cerr << "ptab:"<<cudaGetErrorString(ok)<<"\n";
+		exit(1);
+	}
 	ok=cudaMemcpy (result, resultGPU, size, cudaMemcpyDeviceToHost);
 	if(ok != cudaSuccess)
 	{
@@ -424,6 +436,11 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 					}
 				}
 			}*/
+			
+	/*for(int i =0; i < ptabsize; i++)
+	{
+		cout << ptab[i] <<endl;
+	}*/
     // Argmax of result ===> mapResult
     size_t maxIdx;
     for (pty = 0; pty < this->iHeight; ++pty)
