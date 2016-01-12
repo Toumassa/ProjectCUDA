@@ -234,14 +234,14 @@ void predict(int *returnStartHistTab, ANode* tree, int16_t w, int16_t h, int16_t
     (*returnStartHistTab) = tree[curNode].common_hist_tab_offset;
 }
 
-void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS)
+void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelection<float> *pTS)
 {
     std::cout << "Launching PreKernel\n"; 
 
 	cudaError_t ok;
     this->ts = pTS;
+    
     this->pImageData = this->ts->pImageData;
-    this->treeTabCount = cr->numTrees;
     this->nChannels = this->ts->getNChannels();
     this->iWidth = this->ts->getImgWidth(0);
     this->iHeight = this->ts->getImgHeight(0);
@@ -250,21 +250,14 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
     this->lPYOff = cr->labelPatchHeight / 2;
 
 	
-	for(size_t t = 0; t < this->treeTabCount; ++t)
-    {
-    	this->AddTree(&(forest[t]));
-    }
-
-	
+  
+    
 	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
     this->getFlattenedIntegralFeatures(imageId, &(this->features_integral), &(this->w_integral), &(this->h_integral));
 
 
-    for(int i = 0; i < this->treeTabCount; i++)
-    {
-    	PushTreeToGPU(i);
-    }
+   
     
     copyFeaturesToGPU(this->features, this->fSize, 
 						this->features_integral, this->fIntegralSize, 
@@ -342,7 +335,8 @@ void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t
 		}
 	}
 }
-void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&s)
+
+void GPUAdapter::testGPUSolution(cv::Rect box, Sample<float>&s)
 {
 	int blockSize = 32;
 
@@ -350,13 +344,8 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 	s.y = 0;
 
     dim3 dimBlock(blockSize, blockSize);
-    
     dim3 dimGrid(box.width/blockSize, box.height/blockSize);
     
-    
-    
-    
-	
     for(size_t t = 0; t < this->_treeAsTab.size(); ++t)
     {
 		
@@ -370,8 +359,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		this->_common_hist_tab,  
 		this->numLabels
 		);
-
-	}/**/
+	}
 	
 }
 

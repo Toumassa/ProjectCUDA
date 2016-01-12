@@ -184,7 +184,19 @@ ANode* GPUAdapter::PushTreeToCPU(int n)
 
 
 
+void GPUAdapter::loadTreesGPU(StrucClassSSF<float> *forest, ConfigReader *cr)
+{
+	this->treeTabCount = cr->numTrees;
+	for(size_t t = 0; t < this->treeTabCount; ++t)
+    {
+    	this->AddTree(&(forest[t]));
+    }
 
+	for(int i = 0; i < this->treeTabCount; i++)
+    {
+    	PushTreeToGPU(i);
+    }
+}
 void GPUAdapter::getFlattenedFeatures(uint16_t imageId, float **out_features, uint16_t *out_nbChannels)
 {
     vector<cv::Mat> *pFeatureImages = this->pImageData->getFeatureImages(this->ts->vectSelectedImagesIndices[imageId]);
