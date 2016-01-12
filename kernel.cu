@@ -11,8 +11,6 @@ void copyTreeToGPU(ANode *cpuTree, ANode**gpuTree, int treeSize)
 	// them from host memory to GPU memory
 	size=treeSize*sizeof(ANode);
 	ok=cudaMalloc ((void**) gpuTree, size);
-	/*for(int i = 0; i < treeSize; i++)
-	cout << "*p=" << cpuTree[i].common_hist_tab_offset <<endl;*/
 	
 	if(ok != cudaSuccess)
 	{
@@ -26,16 +24,6 @@ void copyTreeToGPU(ANode *cpuTree, ANode**gpuTree, int treeSize)
 		std::cerr << "Error memcpy RAM to GPU for tree storage\n";
 		exit(1);
 	}
-	
-	/*ok=cudaMemcpy (cpuTree, *gpuTree, size, cudaMemcpyDeviceToHost);
-	if(ok != cudaSuccess)
-	{
-		std::cerr << "Error memcpy RAM to GPU for tree storage\n";
-		exit(1);
-	}*/
-	
-	/*for(int i = 0; i < treeSize; i++)
-	cout << "*p=" << cpuTree[i].common_hist_tab_offset <<endl;*/
 	
 	
 }
@@ -260,18 +248,12 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
     this->lPXOff = cr->labelPatchWidth / 2;
     this->lPYOff = cr->labelPatchHeight / 2;
 
-	//this->treeAsTab = new ANode*[this->treeTabCount];
 	
 	for(size_t t = 0; t < this->treeTabCount; ++t)
     {
     	this->AddTree(&(forest[t]));
     }
 
-    /*for(int i = 0; i < this->treeTabCount; i++)
-    {
-        //actually implemented to CPU
-    	this->treeAsTab[i] = PushTreeToCPU(i);
-    }*/
 	
 	cout << "taille this->common_hist_tab : " << this->common_hist_tab.size();
     this->getFlattenedFeatures(imageId, &(this->features), &(this->nChannels));
@@ -298,11 +280,9 @@ void GPUAdapter::preKernel(uint16_t imageId, StrucClassSSF<float> *forest, Confi
 }
 
 __global__
-void kernel(int *ptab, int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, 
+void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t h_i, float* features, float* features_integral, 
 		Sample<float> sample, int lPXOff, int lPYOff, uint32_t *common_hist_tab, int numLabels)
 {
-	/*for(int i = 0; i < 2005;i++)
-	    ptab[i] = tree[i].common_hist_tab_offset;*/
 	int sx = blockIdx.x*blockDim.x+threadIdx.x;
 	int sy = blockIdx.y*blockDim.y+threadIdx.y;
 	
@@ -311,7 +291,6 @@ void kernel(int *ptab, int *result, ANode* tree, int16_t w, int16_t h, int16_t w
 	sample.y = sy;
 	predict(&p, tree, w, h, w_i, h_i, features, features_integral, sample);
 	
-	//ptab[sy*w+sx]=1;
 	int ptx, pty;
 	for (pty=(int)sy-lPYOff;pty<=(int)sy+(int)lPYOff;++pty)
 	for (ptx=(int)sx-(int)lPXOff;ptx<=(int)sx+(int)lPXOff;++ptx,++p)
@@ -327,9 +306,6 @@ void kernel(int *ptab, int *result, ANode* tree, int16_t w, int16_t h, int16_t w
 		else if (ptx >=0 && ptx<w && pty >= 0 && pty < h)
 		{	
 			result[common_hist_tab[p]*w*h+w*pty+ptx]+=1;
-			//result[0]=17;
-			//result[common_hist_tab[p]].at<float>(pt) += 1;
-			//result[*p].at<float>(pt) += 1;
 		}
 	}
 }
@@ -341,11 +317,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 
 	s.x = 0;
 	s.y = 0;
-
-        // Initialize the result matrices
-    /*vector<cv::Mat> result(this->numLabels);
-    for(int j = 0; j < result.size(); ++j)
-        result[j] = Mat::zeros(box.size(), CV_32FC1);*/
 
     dim3 dimBlock(blockSize, blockSize);
     
@@ -361,13 +332,9 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		result[i] = 0;
 	}
     
-    int *resultGPU;
+	int *resultGPU;
 	ok = cudaMalloc((void**) &resultGPU, size);
 	
-	int ptabsize = this->iWidth*this->iHeight;
-	int *_ptab;
-	ok = cudaMalloc((void**) &_ptab, ptabsize*sizeof(int));
-	int *ptab = (int*)malloc(ptabsize*sizeof(int));
 	
 	if(ok != cudaSuccess)
 	{
@@ -380,13 +347,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		std::cerr << "Error memcpy RAM to GPU for tree result\n";
 		exit(1);
 	}
-	/*ok = cudaMemset(resultGPU,11,size);
-	if(ok != cudaSuccess)
-	{
-		std::cerr << "Error resultGPU memset:"<<cudaGetErrorString(ok)<<"\n";
-		exit(1);
-	}*/
-	
 	
 	if(result == NULL)
 	{
@@ -398,8 +358,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
     {
 		
 		kernel<<<dimGrid, dimBlock>>>
-		(_ptab,
-		resultGPU, _treeAsTab[t], 
+		(resultGPU, _treeAsTab[t], 
 		this->iWidth, this->iHeight, 
 		this->w_integral, this->h_integral, 
 		this->_features, this->_features_integral, 
@@ -411,12 +370,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 
 	}/**/
 	
-	ok=cudaMemcpy (ptab, _ptab, ptabsize*sizeof(int), cudaMemcpyDeviceToHost);
-	if(ok != cudaSuccess)
-	{
-		std::cerr << "ptab:"<<cudaGetErrorString(ok)<<"\n";
-		exit(1);
-	}
+	
 	ok=cudaMemcpy (result, resultGPU, size, cudaMemcpyDeviceToHost);
 	if(ok != cudaSuccess)
 	{

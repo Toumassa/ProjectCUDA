@@ -83,6 +83,9 @@ private:
 	int fSize;
 	int fIntegralSize;
 	
+	/*int *result;
+	int*resultGPU;*/
+	
 
 	vector<uint32_t> common_hist_tab; 
 	
