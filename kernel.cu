@@ -399,7 +399,7 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		
 		kernel<<<dimGrid, dimBlock>>>
 		(_ptab,
-		resultGPU, _treeAsTab[0], 
+		resultGPU, _treeAsTab[t], 
 		this->iWidth, this->iHeight, 
 		this->w_integral, this->h_integral, 
 		this->_features, this->_features_integral, 
@@ -424,24 +424,6 @@ void GPUAdapter::testGPUSolution(cv::Mat*mapResult, cv::Rect box, Sample<float>&
 		exit(1);
 	}
     int ptx, pty;
-		/*for (pty = 0; pty < this->iHeight; ++pty)
-			for (ptx = 0; ptx < this->iWidth; ++ptx)
-			{
-				for(int i =0; i < this->numLabels; i++)
-				{
-					if(result[i*this->iWidth*this->iHeight+pty*this->iWidth+ptx]> 0)
-					{
-						cout << "x,y=" << ptx<<","<<pty<<endl;
-						cout << i << " *i=" << result[i*this->iWidth*this->iHeight+pty*this->iWidth+ptx] << endl;
-					}
-				}
-			}*/
-			
-	/*for(int i =0; i < ptabsize; i++)
-	{
-		cout << ptab[i] <<endl;
-	}*/
-    // Argmax of result ===> mapResult
     size_t maxIdx;
     for (pty = 0; pty < this->iHeight; ++pty)
     for (ptx = 0; ptx < this->iWidth; ++ptx)
