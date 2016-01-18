@@ -42,7 +42,7 @@ using namespace vision;
 
 void usage (char *com) 
 {
-    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix> <[0|1] -> CPU | GPU>\n"
+    std::cerr<< "usage: " << com << " <configfile> <inputimage> <outputimage> <n.o.trees> <tree-model-prefix> <[0|1] -> CPU | GPU> <repeatCount>\n"
         ;
     exit(1);
 }
@@ -81,7 +81,7 @@ inline float profilingTime (const char *s, time_t *whichClock)
 
 
 
-void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS, int execMode)
+void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, TrainingSetSelection<float> *pTS, int execMode, int imageCount)
 {
     GPUAdapter newGPUAdapter;
     int iImage;
@@ -107,7 +107,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 	{
 		profiling("");
 	}
-    for (iImage = 0; iImage < pTS->getNbImages(); ++iImage)
+	int count;
+    for (iImage = 0, count= 0; iImage < pTS->getNbImages()&&count <imageCount; ++count)
     {
     	// Create a sample object, which contains the imageId
         Sample<float> s;
@@ -123,7 +124,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 			//profiling("PreKernel");
 			newGPUAdapter.testGPUSolution(box, s);
 			newGPUAdapter.postKernel(&mapResult);
-			profiling("[!]  Prediction ");
+			//profiling("[!]  Prediction ");
 			//profiling("PostKernel");
 		}
 		else
@@ -214,8 +215,9 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 	}
 	else
 	{
-		profiling("[!]  Prediction ");
+		
 	}
+	profiling("[!] Total Prediction ");
 	if(execMode == 1)
 	{
 		newGPUAdapter.destroy();
@@ -235,7 +237,7 @@ int main(int argc, char* argv[])
     ImageData *idata = new ImageDataFloat();
     TrainingSetSelection<float> *pTrainingSet;
     bool bTestAll = false;
-    int optNumTrees=-1, executionType=0;
+    int optNumTrees=-1, executionType=0, imageCount=0;
     char *optTreeFnamePrefix=NULL;
     char buffer[2048];
 
@@ -249,7 +251,7 @@ int main(int argc, char* argv[])
 		<< "******************************************************\n";
 #endif
 
-    if (argc!=5)
+    if (argc!=6)
         usage(*argv);
     else
     {
@@ -257,6 +259,7 @@ int main(int argc, char* argv[])
         optNumTrees = atoi(argv[2]);
         optTreeFnamePrefix = argv[3];
         executionType = atoi(argv[4]);
+        imageCount = atoi(argv[5]);
     }
 
     if (cr.readConfigFile(strConfigFile)==false)
@@ -313,7 +316,7 @@ int main(int argc, char* argv[])
 	if(executionType==1)
 		execMode = 1;
 	
-    testStructClassForest(forest, &cr, pTrainingSet, execMode);
+    testStructClassForest(forest, &cr, pTrainingSet, execMode, imageCount);
 
     // delete tree;
     delete pTrainingSet;

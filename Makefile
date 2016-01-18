@@ -28,10 +28,16 @@ simple:	sf1_cpu lab2rgb
 
 
 testcpu:
-	./sf1_cpu simple-data/config.txt 6 simple-data/tree 0
+	./sf1_cpu simple-data/config.txt 6 simple-data/tree 0 1
 	
 testgpu:
-	./sf1_cpu simple-data/config.txt 6 simple-data/tree 1
+	./sf1_cpu simple-data/config.txt 6 simple-data/tree 1 1
+	
+testcpu_x10:
+	./sf1_cpu simple-data/config.txt 6 simple-data/tree 0 10
+	
+testgpu_x10:
+	./sf1_cpu simple-data/config.txt 6 simple-data/tree 1 10
 
 kernel.o: kernel.cu
 	$(NVCC) -c -O3 kernel.cu -o kernel.o -L/usr/local/cuda-7.5/lib64 -lcudart
