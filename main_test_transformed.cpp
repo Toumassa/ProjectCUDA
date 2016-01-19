@@ -26,7 +26,7 @@
 #include "SemanticSegmentationForests.h"
 #include "StrucClassSSF.h"
 
-
+#include <math.h>
 #include "label.h"
 #include "GPUAdapter.h"
 
@@ -89,6 +89,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     cv::Mat matConfusion;
     char strOutput[200];
     
+    float *kerneltime = new float[imageCount];
 	
 	if(execMode ==1)
 	{
@@ -122,9 +123,10 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 			//profiling("");
 			newGPUAdapter.preKernel(s.imageId, cr, pTS);
 			//profiling("PreKernel");
+			profiling("");
 			newGPUAdapter.testGPUSolution(box, s);
+			kerneltime[count] = profiling("[!]  Prediction ");
 			newGPUAdapter.postKernel(&mapResult);
-			//profiling("[!]  Prediction ");
 			//profiling("PostKernel");
 		}
 		else
@@ -217,13 +219,31 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 	{
 		
 	}
-	profiling("[!] Total Prediction ");
+	//profiling("[!] Total Prediction ");
 	if(execMode == 1)
 	{
+		float moyenne = 0, ecartType =0, racinDist=0, sum=0;
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			moyenne+=kerneltime[h];
+		}
+		moyenne = moyenne/imageCount;
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			racinDist = kerneltime[h]-moyenne;
+			sum+=racinDist*racinDist;
+		}
+		sum/=imageCount;
+		
+		ecartType=sqrt(sum);
 		newGPUAdapter.destroy();
+		
+		cout << " TIME x"<<imageCount<<" : mean="<<moyenne<<",stdDev="<< ecartType<<endl;
 		profiling("Destroy");
 	}
-
+	delete [] kerneltime;
 }
 
 /***************************************************************************
