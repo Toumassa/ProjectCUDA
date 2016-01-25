@@ -126,7 +126,7 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 			newGPUAdapter.preKernel(s.imageId, cr, pTS);
 			preKerneltime[count]=profiling("PreKernel");
 			profiling("");
-			//1newGPUAdapter.testGPUSolution(box, s);
+			newGPUAdapter.testGPUSolution(box, s);
 			kerneltime[count] = profiling("[!]  Prediction ");
 			newGPUAdapter.postKernel(&mapResult);
 			postKerneltime[count] = profiling("PostKernel");

@@ -326,14 +326,14 @@ void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t
 	for (pty=(int)sy-lPYOff;pty<=(int)sy+(int)lPYOff;++pty)
 	for (ptx=(int)sx-(int)lPXOff;ptx<=(int)sx+(int)lPXOff;++ptx,++p)
 	{
-		   if (common_hist_tab[p]< 0 || common_hist_tab[p] >= numLabels)
-			{
-				/*cout << "x:" << sx << " y:"<<sy << " tree:"<< t << endl;
-				cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
-				cout << "*p : " << common_hist_tab[p] << endl;
-				//std::cerr << "Invalid label in prediction: " << (int) common_hist_tab[p] << "\n";
-				*///exit(1);
-			}         
+		if (common_hist_tab[p]< 0 || common_hist_tab[p] >= numLabels)
+		{
+			/*cout << "x:" << sx << " y:"<<sy << " tree:"<< t << endl;
+			cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
+			cout << "*p : " << common_hist_tab[p] << endl;
+			//std::cerr << "Invalid label in prediction: " << (int) common_hist_tab[p] << "\n";
+			*///exit(1);
+		}         
 		else if (ptx >=0 && ptx<w && pty >= 0 && pty < h)
 		{	
 			result[common_hist_tab[p]*w*h+w*pty+ptx]+=1;
