@@ -90,6 +90,8 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
     char strOutput[200];
     
     float *kerneltime = new float[imageCount];
+    float *preKerneltime = new float[imageCount];
+    float *postKerneltime = new float[imageCount];
 	
 	if(execMode ==1)
 	{
@@ -122,12 +124,12 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 		{
 			//profiling("");
 			newGPUAdapter.preKernel(s.imageId, cr, pTS);
-			//profiling("PreKernel");
+			preKerneltime[count]=profiling("PreKernel");
 			profiling("");
-			newGPUAdapter.testGPUSolution(box, s);
+			//1newGPUAdapter.testGPUSolution(box, s);
 			kerneltime[count] = profiling("[!]  Prediction ");
 			newGPUAdapter.postKernel(&mapResult);
-			//profiling("PostKernel");
+			postKerneltime[count] = profiling("PostKernel");
 		}
 		else
 		{
@@ -224,6 +226,24 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 	{
 		float moyenne = 0, ecartType =0, racinDist=0, sum=0;
 		
+		
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			moyenne+=preKerneltime[h];
+		}
+		moyenne = moyenne/imageCount;
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			racinDist = preKerneltime[h]-moyenne;
+			sum+=racinDist*racinDist;
+		}
+		sum/=imageCount;
+		
+		ecartType=sqrt(sum);
+		cout << " PREKERNEL TIME x"<<imageCount<<" : mean="<<moyenne<<",stdDev="<< ecartType<<endl;
+		
 		for(int h=0 ; h< imageCount; h++)
 		{
 			moyenne+=kerneltime[h];
@@ -238,12 +258,32 @@ void testStructClassForest(StrucClassSSF<float> *forest, ConfigReader *cr, Train
 		sum/=imageCount;
 		
 		ecartType=sqrt(sum);
+		cout << " KERNEL TIME x"<<imageCount<<" : mean="<<moyenne<<",stdDev="<< ecartType<<endl;
+		
+		
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			moyenne+=postKerneltime[h];
+		}
+		moyenne = moyenne/imageCount;
+		
+		for(int h=0 ; h< imageCount; h++)
+		{
+			racinDist = postKerneltime[h]-moyenne;
+			sum+=racinDist*racinDist;
+		}
+		sum/=imageCount;
+		
+		ecartType=sqrt(sum);
+		cout << " POST TIME x"<<imageCount<<" : mean="<<moyenne<<",stdDev="<< ecartType<<endl;
 		newGPUAdapter.destroy();
 		
-		cout << " TIME x"<<imageCount<<" : mean="<<moyenne<<",stdDev="<< ecartType<<endl;
 		profiling("Destroy");
 	}
 	delete [] kerneltime;
+	delete [] preKerneltime;
+	delete [] postKerneltime;
 }
 
 /***************************************************************************
