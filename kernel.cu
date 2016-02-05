@@ -2,6 +2,9 @@
 
 
 
+/**
+	Copy a tree from array to GPU
+*/
 void copyTreeToGPU(ANode *cpuTree, ANode**gpuTree, int treeSize)
 {
 	cudaError_t ok;
@@ -17,18 +20,17 @@ void copyTreeToGPU(ANode *cpuTree, ANode**gpuTree, int treeSize)
 		std::cerr << "Error gpu allocation for tree:"<<cudaGetErrorString(ok)<<"\n";
 		exit(1);
 	}
-	//CHECK_CUDA_MALLOC;
 	ok=cudaMemcpy (*gpuTree, cpuTree, size, cudaMemcpyHostToDevice);
 	if(ok != cudaSuccess)
 	{
 		std::cerr << "Error memcpy RAM to GPU for tree storage\n";
 		exit(1);
 	}
-	
-	
 }
 
-
+/**
+	Copy feature and features integral  from arrays to GPU
+*/
 void copyFeaturesToGPU(float *features, int fsize, float *integral_features, int fintegral_size, float **_features, float **_integral_features)
 {
 	cudaError_t ok;
@@ -67,7 +69,9 @@ void copyFeaturesToGPU(float *features, int fsize, float *integral_features, int
 	}
 }
 
-
+/**
+	Copy the commun this array to GPU
+*/
 void copyCommonHistTabToGPU(uint32_t*hist, uint32_t**_hist, int hsize)
 {
 	cudaError_t ok;
@@ -107,11 +111,7 @@ void GPUAdapter::PushTreeToGPU(int n)
 		exit(1);
 	}
 
-	//change with malloc GPU
 	ANode *treeToGPU;
-	
-	/*for(int i = 0; i < this->treesAsVector[n]->size();i++)
-		tree[i]=(*this->treesAsVector[n])[i];*/
 	
 	copyTreeToGPU(this->treesAsVector[n]->data(), &treeToGPU, this->treesAsVector[n]->size());
 	
@@ -122,7 +122,6 @@ __device__
 float gpuGetValue (float *gpuFeatures, uint8_t channel, 
     int16_t x, int16_t y, int16_t w, int16_t h)
 {
-  //cout << "before gpuGetValue\n";
     float res = gpuFeatures[y+x*h + channel*w*h];
     return res;
 }
@@ -227,6 +226,7 @@ void predict(int *returnStartHistTab, ANode* tree, int16_t w, int16_t h, int16_t
         break;
       }
     }
+	//store global index in hist tab for the current node
     (*returnStartHistTab) = tree[curNode].common_hist_tab_offset;
 }
 /**
@@ -276,11 +276,7 @@ void GPUAdapter::preKernel(uint16_t imageId, ConfigReader *cr, TrainingSetSelect
 	int size = this->iWidth*this->iHeight*this->numLabels*sizeof(int);
 	this->result = (int*)malloc(size);
 	
-	/*for(int i =0; i < this->iWidth*this->iHeight*this->numLabels; i++)
-	{
-		this->result[i] = 0;
-	}*/
-    
+
 	ok = cudaMalloc((void**) &this->resultGPU, size);if(ok != cudaSuccess)
 	{
 		std::cerr << "Error gpu allocation this->resultGPU:"<<cudaGetErrorString(ok)<<"\n";
@@ -326,14 +322,9 @@ void kernel(int *result, ANode* tree, int16_t w, int16_t h, int16_t w_i, int16_t
 	for (pty=(int)sy-lPYOff;pty<=(int)sy+(int)lPYOff;++pty)
 	for (ptx=(int)sx-(int)lPXOff;ptx<=(int)sx+(int)lPXOff;++ptx,++p)
 	{
-		   if (common_hist_tab[p]< 0 || common_hist_tab[p] >= numLabels)
-			{
-				/*cout << "x:" << sx << " y:"<<sy << " tree:"<< t << endl;
-				cout << "pt.x:" << pt.x << " pt.y:"<<pt.y << ":"<< p << endl;
-				cout << "*p : " << common_hist_tab[p] << endl;
-				//std::cerr << "Invalid label in prediction: " << (int) common_hist_tab[p] << "\n";
-				*///exit(1);
-			}         
+		if (common_hist_tab[p]< 0 || common_hist_tab[p] >= numLabels)
+		{
+		}         
 		else if (ptx >=0 && ptx<w && pty >= 0 && pty < h)
 		{	
 			result[common_hist_tab[p]*w*h+w*pty+ptx]+=1;
@@ -351,6 +342,7 @@ void GPUAdapter::testGPUSolution(cv::Rect box, Sample<float>&s)
     dim3 dimBlock(blockSize, blockSize);
     dim3 dimGrid(box.width/blockSize, box.height/blockSize);
     
+	//foreach tree call the kernel
     for(size_t t = 0; t < this->_treeAsTab.size(); ++t)
     {
 		
@@ -391,8 +383,6 @@ void GPUAdapter::postKernel(cv::Mat*mapResult)
         {
 			if(this->result[j*this->iWidth*this->iHeight+pty*this->iWidth+ptx] > this->result[maxIdx*this->iWidth*this->iHeight+pty*this->iWidth+ptx])
 				maxIdx = j;
-            
-			
         }
 		pt.x = ptx;
 		pt.y = pty;
